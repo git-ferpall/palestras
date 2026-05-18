@@ -12,13 +12,29 @@ function getTransporter() {
 
   const port = Number(process.env.SMTP_PORT ?? 587);
   const secure =
-    process.env.SMTP_SECURE === "true" || port === 465;
+    process.env.SMTP_SECURE === "true" ||
+    (process.env.SMTP_SECURE !== "false" && port === 465);
+
+  const tls: { servername: string; minVersion: "TLSv1.2"; rejectUnauthorized?: boolean } =
+    {
+      servername: host,
+      minVersion: "TLSv1.2",
+    };
+
+  if (process.env.SMTP_TLS_REJECT_UNAUTHORIZED === "false") {
+    tls.rejectUnauthorized = false;
+  }
 
   return nodemailer.createTransport({
     host,
     port,
     secure,
+    requireTLS: !secure && port === 587,
     auth: { user, pass },
+    connectionTimeout: 20_000,
+    greetingTimeout: 20_000,
+    socketTimeout: 20_000,
+    tls,
   });
 }
 
