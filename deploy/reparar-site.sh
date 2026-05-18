@@ -1,56 +1,77 @@
 #!/bin/bash
-# Repara logo 404 + _next/static 404 — rode como root no servidor
+# Repara 404 em /_next/static — build limpo + permissões + reinício
 set -euo pipefail
 APP="/var/www/palestras.abrarastro.org"
 cd "$APP"
 
-echo "========== 1. Logos em public/logos =========="
-mkdir -p public/logos
-if [[ -f src/logos/logo-abrarastro-vertical.png ]]; then
-  cp -f src/logos/logo-abrarastro-vertical.png public/logos/abrarastro.png
-  echo "OK abrarastro.png"
-elif [[ -f src/logos/abrarastro.png ]]; then
-  cp -f src/logos/abrarastro.png public/logos/abrarastro.png
-  echo "OK abrarastro.png"
-else
-  echo "ERRO: coloque logo-abrarastro-vertical.png em src/logos/"
-  exit 1
-fi
-[[ -f src/logos/frutag.png ]] && cp -f src/logos/frutag.png public/logos/frutag.png
+echo "========== 1. Parar Node (evita servir .next antigo) =========="
+systemctl stop palestras || true
+sleep 2
+fuser -k 3000/tcp 2>/dev/null || true
+sleep 1
 
 echo ""
-echo "========== 2. Build (limpa .next antigo) =========="
+echo "========== 2. Logos em public/logos =========="
+mkdir -p public/logos
+node scripts/copy-logos.mjs 2>/dev/null || true
+if [[ ! -f public/logos/abrarastro.png ]]; then
+  if [[ -f src/logos/logo-abrarastro-vertical.png ]]; then
+    cp -f src/logos/logo-abrarastro-vertical.png public/logos/abrarastro.png
+  elif [[ -f src/logos/abrarastro.png ]]; then
+    cp -f src/logos/abrarastro.png public/logos/abrarastro.png
+  else
+    echo "ERRO: coloque logo em src/logos/"
+    exit 1
+  fi
+fi
+echo "OK public/logos/abrarastro.png"
+
+echo ""
+echo "========== 3. Build limpo =========="
 rm -rf .next
 npm run build
 
 echo ""
-echo "========== 3. Servico Node =========="
+echo "========== 4. Permissões (serviço roda como www-data) =========="
+chown -R www-data:www-data .next
+chown -R www-data:www-data public/logos 2>/dev/null || true
+chown www-data:www-data .env 2>/dev/null || true
+
+echo ""
+echo "========== 5. Reiniciar Node =========="
 cp -f deploy/palestras.service /etc/systemd/system/palestras.service
 systemctl daemon-reload
 systemctl enable palestras
-systemctl restart palestras
-sleep 4
+systemctl start palestras
+sleep 5
 systemctl is-active palestras
 
 echo ""
-echo "========== 4. Teste Node :3000 =========="
-curl -sfI "http://127.0.0.1:3000/logos/abrarastro.png" | head -2
-curl -sfI "http://127.0.0.1:3000/" | head -2
-CSS=$(find .next/static/css -name '*.css' 2>/dev/null | head -1 || true)
-if [[ -n "$CSS" ]]; then
-  REL="${CSS#.next/}"
-  echo "CSS: /_next/$REL"
-  curl -sfI "http://127.0.0.1:3000/_next/$REL" | head -2
+echo "========== 6. Teste arquivos estáticos no Node :3000 =========="
+CSS=$(find .next/static/css -maxdepth 1 -name '*.css' 2>/dev/null | head -1)
+if [[ -z "$CSS" ]]; then
+  echo "ERRO: nenhum CSS gerado em .next/static/css"
+  exit 1
+fi
+REL="${CSS#.next/}"
+echo "Arquivo: $CSS"
+echo "URL: /_next/$REL"
+
+STATUS=$(curl -sI "http://127.0.0.1:3000/_next/$REL" | head -1)
+echo "Node: $STATUS"
+if ! echo "$STATUS" | grep -q "200"; then
+  echo ""
+  echo "ERRO: Next.js não serve o CSS após build limpo."
+  echo "Verifique: journalctl -u palestras -n 50 --no-pager"
+  exit 1
 fi
 
 echo ""
-echo "========== 5. Apache proxy =========="
+echo "========== 7. Apache proxy =========="
 bash deploy/fix-ssl-apache.sh
 
-echo ""
-echo "========== 6. Teste HTTPS =========="
-curl -sI "https://palestras.abrarastro.org/logos/abrarastro.png" | head -3
-curl -sI "https://palestras.abrarastro.org/" | head -3
+HTTPS_STATUS=$(curl -sI "https://palestras.abrarastro.org/_next/$REL" | head -1)
+echo "HTTPS: $HTTPS_STATUS"
 
 echo ""
 echo "Pronto. No navegador: Ctrl+Shift+R (limpar cache)."

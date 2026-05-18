@@ -21,14 +21,16 @@ echo "OK: fontes usam pdf-lib"
 echo "=== npm install ==="
 npm install
 
-echo "=== Removendo build antigo (PDFKit embutido no .next) ==="
+echo "=== Parando serviço e removendo build antigo ==="
+sudo systemctl stop palestras || true
 rm -rf .next
 
 echo "=== prisma generate + next build ==="
 npm run build
+sudo chown -R www-data:www-data .next
 
 echo "=== Reiniciando serviço ==="
-sudo systemctl restart palestras
+sudo systemctl start palestras
 sleep 2
 sudo systemctl is-active palestras
 
