@@ -34,7 +34,7 @@ export async function GET(
 
   const filename = `certificado-${inscricao.nome.replace(/\s+/g, "-").toLowerCase()}.pdf`;
 
-  return new NextResponse(pdf, {
+  return new NextResponse(new Uint8Array(pdf), {
     headers: {
       "Content-Type": "application/pdf",
       "Content-Disposition": `attachment; filename="${filename}"`,
