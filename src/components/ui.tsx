@@ -66,7 +66,7 @@ export function Input(props: InputHTMLAttributes<HTMLInputElement>) {
   return (
     <input
       {...props}
-      className={`w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:bg-slate-100 ${props.className ?? ""}`}
+      className={`w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none transition focus:border-[#0d6e6e] focus:ring-2 focus:ring-teal-100 disabled:bg-slate-100 ${props.className ?? ""}`}
     />
   );
 }
@@ -75,7 +75,7 @@ export function Textarea(props: TextareaHTMLAttributes<HTMLTextAreaElement>) {
   return (
     <textarea
       {...props}
-      className={`w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 ${props.className ?? ""}`}
+      className={`w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none transition focus:border-[#0d6e6e] focus:ring-2 focus:ring-teal-100 ${props.className ?? ""}`}
     />
   );
 }
@@ -87,7 +87,7 @@ export function Button({
   variant?: "primary" | "secondary" | "danger";
 }) {
   const variants = {
-    primary: "bg-blue-600 text-white hover:bg-blue-700",
+    primary: "bg-[#0f2744] text-white hover:bg-[#1e3a8a]",
     secondary: "bg-slate-100 text-slate-800 hover:bg-slate-200",
     danger: "bg-red-600 text-white hover:bg-red-700",
   };

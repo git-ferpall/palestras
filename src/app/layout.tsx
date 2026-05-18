@@ -2,8 +2,9 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Palestras",
-  description: "Palestras — inscrições e certificados",
+  title: "ABRARASTRO — Palestras e certificados",
+  description:
+    "Associação Brasileira de Rastreabilidade de Alimentos — inscrições, certificados e validação",
 };
 
 export default function RootLayout({
