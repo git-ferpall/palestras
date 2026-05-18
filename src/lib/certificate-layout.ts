@@ -34,6 +34,26 @@ export function formatCargaHorasCertificado(h: number) {
   return h === 1 ? "(1 HORA)" : `(${h} HORAS)`;
 }
 
+/** Ex.: FABIANO AMARO → Fabiano Amaro */
+export function formatNomeParticipante(nome: string): string {
+  return nome
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((part) => {
+      const lower = part.toLocaleLowerCase("pt-BR");
+      return lower.charAt(0).toLocaleUpperCase("pt-BR") + lower.slice(1);
+    })
+    .join(" ");
+}
+
+/** Nome do ministrante sempre em maiúsculas no certificado */
+export function formatNomeMinistrante(nome: string | null | undefined): string {
+  const t = nome?.trim();
+  if (!t) return "MINISTRANTE";
+  return t.toLocaleUpperCase("pt-BR");
+}
+
 export async function embedImageBytes(pdfDoc: PDFDocument, bytes: Buffer, filePath: string) {
   const lower = filePath.toLowerCase();
   if (lower.endsWith(".jpg") || lower.endsWith(".jpeg")) {
@@ -260,7 +280,8 @@ export async function drawSignatureWithImage(
   font: PDFFont,
   fontBold: PDFFont,
   /** true = imagePath é caminho absoluto no disco (assinatura fixa) */
-  directFile = false
+  directFile = false,
+  signatureHeight = 42
 ) {
   const lineY = baseY + 42;
   if (imagePath) {
@@ -271,9 +292,9 @@ export async function drawSignatureWithImage(
       : resolvePalestraAsset(imagePath);
     const img = abs ? await embedImageFromPath(pdfDoc, abs) : null;
     if (img) {
-      const sigH = 42;
+      const sigH = signatureHeight;
       const scale = sigH / img.height;
-      const w = Math.min(img.width * scale, lineWidth - 10);
+      const w = Math.min(img.width * scale, lineWidth - 6);
       const h = img.height * (w / img.width);
       page.drawImage(img, {
         x: centerX - w / 2,

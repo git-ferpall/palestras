@@ -24,6 +24,8 @@ import {
   resolvePresidenciaAssinaturaPath,
   CertColors,
   formatCargaHorasCertificado,
+  formatNomeParticipante,
+  formatNomeMinistrante,
 } from "./certificate-layout";
 
 export type CertificateData = {
@@ -556,7 +558,14 @@ async function drawFrontPage(
   drawCentered(page, "CERTIFICADO DE CONCLUSÃO", y, sz.tituloCert, font, CertColors.muted);
   y += sz.tituloCert + gap.md;
 
-  drawCentered(page, data.nome, y, sz.nome, fontBold, CertColors.ink);
+  drawCentered(
+    page,
+    formatNomeParticipante(data.nome),
+    y,
+    sz.nome,
+    fontBold,
+    CertColors.ink
+  );
   y += sz.nome + gap.lg;
 
   drawCentered(page, "Participou da Palestra", y, sz.participou, font, CertColors.muted);
@@ -577,35 +586,39 @@ async function drawFrontPage(
   drawCentered(page, data.dataPalestra, y, sz.data, font, CertColors.text);
 
   const sigBase = L.bottom + 8;
-  const sigW = 220;
-  const leftCx = L.left + 28 + sigW / 2;
-  const rightCx = width - L.right - 28 - sigW / 2;
+  const sigWLeft = 250;
+  const sigWRight = 230;
+  const leftCx = L.left + 28 + sigWLeft / 2;
+  const rightCx = width - L.right - 28 - sigWRight / 2;
 
   const presidenciaAssinatura = resolvePresidenciaAssinaturaPath();
   await drawSignatureWithImage(
     page,
     pdfDoc,
     leftCx,
-    sigW,
+    sigWLeft,
     sigBase,
     "DIRETORIA ABRARASTRO",
     presidenciaAssinatura,
     font,
     fontBold,
-    true
+    true,
+    62
   );
 
-  const ministranteLabel = data.ministranteNome?.trim() || "Ministrante";
+  const ministranteLabel = formatNomeMinistrante(data.ministranteNome);
   await drawSignatureWithImage(
     page,
     pdfDoc,
     rightCx,
-    sigW,
+    sigWRight,
     sigBase,
     ministranteLabel,
     data.ministranteAssinaturaPath,
     font,
-    fontBold
+    fontBold,
+    false,
+    52
   );
 }
 
@@ -787,7 +800,7 @@ export function buildCertificateData(
   _formatCpf: (c: string) => string
 ): CertificateData {
   return {
-    nome: inscricao.nome,
+    nome: formatNomeParticipante(inscricao.nome),
     cpf: _formatCpf(inscricao.cpf),
     tituloPalestra: palestra.titulo,
     dataPalestra: formatDateBR(palestra.data),
@@ -795,7 +808,9 @@ export function buildCertificateData(
     cargaHoraria: palestra.cargaHoraria,
     temas: parseTemasJson(palestra.temas ?? null),
     logoEventoPath: palestra.logoEventoPath ?? null,
-    ministranteNome: palestra.ministranteNome ?? null,
+    ministranteNome: palestra.ministranteNome
+      ? formatNomeMinistrante(palestra.ministranteNome)
+      : null,
     ministranteAssinaturaPath: palestra.ministranteAssinaturaPath ?? null,
     validacaoHash,
   };
