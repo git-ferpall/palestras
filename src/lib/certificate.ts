@@ -597,53 +597,60 @@ function drawBackPage(
   const { width, height } = page.getSize();
   drawProfessionalFrame(page);
 
-  let y = 52;
-  drawCentered(page, "CONTEÚDO PROGRAMÁTICO", y, 20, fontBold, C.navy);
-  y += 26;
+  let y = 48;
+  drawCentered(page, "CONTEÚDO PROGRAMÁTICO", y, 18, fontBold, C.navy);
+  y += 24;
   drawOrnamentLine(page, y);
-  y += 14;
-  drawCentered(page, data.tituloPalestra, y, 11, font, C.teal);
-  y += 22;
+  y += 12;
+  drawCentered(page, data.tituloPalestra, y, 10, font, C.teal);
+  y += 20;
 
   const tableLeft = L.left;
-  const tableW = width - L.left - L.right - L.qrReserve;
-  const colNumW = 40;
+  const tableW = width - L.left - L.right;
+  const colNumW = 44;
   const temaX = tableLeft + colNumW;
   const temaW = tableW - colNumW;
-  const qrBlockHeight = L.qrSize + L.qrPad * 2 + 24;
-  const maxYFromTop = height - L.bottom - qrBlockHeight - 16;
+
+  const headerRowH = 26;
+  const footerRowH = 28;
+  const qrBlockH = L.qrSize + L.qrPad * 2 + 24;
+  const bodyEndY = height - L.bottom - qrBlockH - footerRowH - 10;
 
   page.drawRectangle({
     x: tableLeft,
-    y: yTop(height, y, 22),
+    y: yTop(height, y, headerRowH),
     width: tableW,
-    height: 22,
+    height: headerRowH,
     color: C.navy,
   });
   page.drawText("Nº", {
-    x: tableLeft + 12,
-    y: yTop(height, y + 7, 9),
-    size: 9,
+    x: tableLeft + 14,
+    y: yTop(height, y + 8, 10),
+    size: 10,
     font: fontBold,
     color: C.white,
   });
   page.drawText("TEMA ABORDADO", {
-    x: temaX + 8,
-    y: yTop(height, y + 7, 9),
-    size: 9,
+    x: temaX + 10,
+    y: yTop(height, y + 8, 10),
+    size: 10,
     font: fontBold,
     color: C.white,
   });
-  y += 22;
+  y += headerRowH;
 
   const temas =
     data.temas.length > 0 ? data.temas : ["Conteúdo conforme programação do evento"];
 
-  for (let i = 0; i < temas.length; i++) {
-    const lines = wrapLines(temas[i], font, 9, temaW - 16);
-    const rowH = Math.max(22, lines.length * 11 + 10);
+  const bodyHeight = Math.max(60, bodyEndY - y);
+  const rowH = Math.max(36, bodyHeight / temas.length);
+  const fontSize = 10;
+  const lineGap = 12;
 
-    if (y + rowH > maxYFromTop) break;
+  for (let i = 0; i < temas.length; i++) {
+    const lines = wrapLines(temas[i], font, fontSize, temaW - 20);
+    const textH = lines.length * lineGap;
+    const padTop = Math.max(8, (rowH - textH) / 2);
 
     if (i % 2 === 0) {
       page.drawRectangle({
@@ -655,41 +662,51 @@ function drawBackPage(
       });
     }
 
+    page.drawRectangle({
+      x: tableLeft,
+      y: yTop(height, y, rowH),
+      width: tableW,
+      height: rowH,
+      borderColor: C.faint,
+      borderWidth: 0.4,
+    });
+
     page.drawText(String(i + 1).padStart(2, "0"), {
-      x: tableLeft + 12,
-      y: yTop(height, y + 6, 9),
-      size: 9,
+      x: tableLeft + 14,
+      y: yTop(height, y + padTop + fontSize - 2, fontSize),
+      size: fontSize,
       font: fontBold,
       color: C.teal,
     });
 
-    let lineY = y + 6;
+    let lineY = y + padTop;
     for (const ln of lines) {
       page.drawText(ln, {
-        x: temaX + 8,
-        y: yTop(height, lineY, 9),
-        size: 9,
+        x: temaX + 10,
+        y: yTop(height, lineY, fontSize),
+        size: fontSize,
         font,
         color: C.slate,
       });
-      lineY += 11;
+      lineY += lineGap;
     }
     y += rowH;
   }
 
+  const footerY = bodyEndY;
   page.drawRectangle({
     x: tableLeft,
-    y: yTop(height, y, 24),
+    y: yTop(height, footerY, footerRowH),
     width: tableW,
-    height: 24,
+    height: footerRowH,
     color: C.teal,
   });
   page.drawText(
     `Carga horária total: ${data.cargaHoraria} hora(s)  •  Horário: ${data.horario}`,
     {
-      x: temaX + 8,
-      y: yTop(height, y + 8, 9),
-      size: 9,
+      x: temaX + 10,
+      y: yTop(height, footerY + 9, 10),
+      size: 10,
       font: fontBold,
       color: C.white,
     }
