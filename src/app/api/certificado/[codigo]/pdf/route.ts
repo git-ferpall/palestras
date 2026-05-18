@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { generateCertificatePdf } from "@/lib/certificate";
+import {
+  generateCertificatePdf,
+  buildCertificateData,
+} from "@/lib/certificate";
 import { formatCpf, formatDateBR } from "@/lib/utils";
+import { ensureValidacaoHash } from "@/lib/inscricao-utils";
 
 export async function GET(
   _request: Request,
@@ -21,16 +25,20 @@ export async function GET(
     );
   }
 
-  const pdf = await generateCertificatePdf({
-    nome: inscricao.nome,
-    cpf: formatCpf(inscricao.cpf),
-    tituloPalestra: inscricao.palestra.titulo,
-    dataPalestra: formatDateBR(inscricao.palestra.data),
-    horario: inscricao.palestra.horario,
-    cargaHoraria: inscricao.palestra.cargaHoraria,
-    local: inscricao.palestra.local,
-    certificadoCodigo: inscricao.certificadoCodigo,
-  });
+  const validacaoHash = await ensureValidacaoHash(
+    inscricao.id,
+    inscricao.validacaoHash
+  );
+
+  const pdf = await generateCertificatePdf(
+    buildCertificateData(
+      inscricao,
+      inscricao.palestra,
+      validacaoHash,
+      formatDateBR,
+      formatCpf
+    )
+  );
 
   const filename = `certificado-${inscricao.nome.replace(/\s+/g, "-").toLowerCase()}.pdf`;
 

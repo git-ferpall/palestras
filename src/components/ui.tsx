@@ -121,6 +121,28 @@ export function Alert({
   );
 }
 
+export function Checkbox({
+  name,
+  label,
+  defaultChecked,
+}: {
+  name: string;
+  label: string;
+  defaultChecked?: boolean;
+}) {
+  return (
+    <label className="flex cursor-pointer items-center gap-2 text-sm text-slate-700">
+      <input
+        type="checkbox"
+        name={name}
+        defaultChecked={defaultChecked}
+        className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+      />
+      {label}
+    </label>
+  );
+}
+
 export function Badge({
   children,
   tone = "default",

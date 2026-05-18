@@ -46,10 +46,11 @@ export async function sendCertificateEmail(params: {
   nome: string;
   tituloPalestra: string;
   certificadoCodigo: string;
+  validacaoHash: string;
 }): Promise<SendEmailResult> {
   const appUrl = getAppUrl();
   const downloadUrl = `${appUrl}/certificado/${params.certificadoCodigo}`;
-  const validarUrl = `${appUrl}/validar/${params.certificadoCodigo}`;
+  const validarUrl = `${appUrl}/validar/${params.validacaoHash}`;
 
   const html = `
     <motionless>
@@ -64,14 +65,14 @@ export async function sendCertificateEmail(params: {
         </a>
       </p>
       <p style="font-size: 14px; color: #475569;">
-        Código de validação: <strong>${params.certificadoCodigo}</strong><br/>
+        Código de validação: <strong>${params.validacaoHash}</strong><br/>
         Verifique a autenticidade em: <a href="${validarUrl}">${validarUrl}</a>
       </p>
     </motionless>
     </motionless>
   `.replace(/<motionless>|<\/motionless>/g, "");
 
-  const text = `Olá ${params.nome},\n\nSeu certificado da palestra "${params.tituloPalestra}" está disponível:\n${downloadUrl}\n\nCódigo de validação: ${params.certificadoCodigo}\nValidar: ${validarUrl}`;
+  const text = `Olá ${params.nome},\n\nSeu certificado da palestra "${params.tituloPalestra}" está disponível:\n${downloadUrl}\n\nCódigo de validação: ${params.validacaoHash}\nValidar: ${validarUrl}`;
 
   const transporter = getTransporter();
 

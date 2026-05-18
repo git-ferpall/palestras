@@ -2,6 +2,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { formatDateBR, formatCpf } from "@/lib/utils";
+import { formatValidacaoHashDisplay } from "@/lib/certificate-utils";
+import { ensureValidacaoHash } from "@/lib/inscricao-utils";
 import { Container, Card, PageHeader, Button, Alert } from "@/components/ui";
 
 export default async function CertificadoPage({
@@ -17,6 +19,11 @@ export default async function CertificadoPage({
   });
 
   if (!inscricao) notFound();
+
+  const validacaoHash = await ensureValidacaoHash(
+    inscricao.id,
+    inscricao.validacaoHash
+  );
 
   if (inscricao.palestra.status !== "ENCERRADA") {
     return (
@@ -62,7 +69,9 @@ export default async function CertificadoPage({
             </div>
             <div>
               <dt className="text-slate-500">Código de validação</dt>
-              <dd className="font-mono text-xs break-all">{codigo}</dd>
+              <dd className="font-mono text-sm">
+                {formatValidacaoHashDisplay(validacaoHash)}
+              </dd>
             </div>
           </dl>
 
@@ -70,7 +79,7 @@ export default async function CertificadoPage({
             <a href={`/api/certificado/${codigo}/pdf`} download>
               <Button>Baixar PDF</Button>
             </a>
-            <Link href={`/validar/${codigo}`}>
+            <Link href={`/validar/${validacaoHash}`}>
               <Button variant="secondary">Validar certificado</Button>
             </Link>
           </div>

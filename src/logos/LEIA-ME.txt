@@ -1,0 +1,3 @@
+Coloque os arquivos de logo nesta pasta:
+  - abrarastro.png  (ou .jpg)
+  - frutag.png      (ou .jpg)

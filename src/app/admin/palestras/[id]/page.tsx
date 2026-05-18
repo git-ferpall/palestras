@@ -5,6 +5,7 @@ import { prisma } from "@/lib/db";
 import { getSessionAdmin } from "@/lib/auth";
 import { getInscricaoUrl, generateQrCodeDataUrl } from "@/lib/qrcode";
 import { formatDateBR, formatDateTimeBR, formatCpf } from "@/lib/utils";
+import { parseTemasJson, formatValidacaoHashDisplay } from "@/lib/certificate-utils";
 import {
   Container,
   PageHeader,
@@ -105,7 +106,29 @@ export default async function PalestraDetailPage({
               <dt className="text-slate-500">Inscritos</dt>
               <dd>{palestra.inscricoes.length}</dd>
             </div>
+            <div className="flex justify-between gap-4">
+              <dt className="text-slate-500">Logos</dt>
+              <dd>
+                {[
+                  palestra.usarLogoAbrarastro && "Abrarastro",
+                  palestra.usarLogoFrutag && "Frutag",
+                ]
+                  .filter(Boolean)
+                  .join(", ") || "Nenhuma"}
+              </dd>
+            </div>
           </dl>
+
+          {parseTemasJson(palestra.temas).length > 0 && (
+            <div className="mt-4 border-t border-slate-100 pt-4">
+              <p className="mb-2 text-sm font-medium text-slate-700">Temas (verso)</p>
+              <ol className="list-decimal space-y-1 pl-5 text-sm text-slate-600">
+                {parseTemasJson(palestra.temas).map((t) => (
+                  <li key={t}>{t}</li>
+                ))}
+              </ol>
+            </div>
+          )}
 
           {palestra.status === "AGENDADA" && (
             <div className="mt-6 border-t border-slate-100 pt-6">
@@ -150,6 +173,7 @@ export default async function PalestraDetailPage({
                   <th className="py-2 pr-4">Nome</th>
                   <th className="py-2 pr-4">CPF</th>
                   <th className="py-2 pr-4">E-mail</th>
+                  <th className="py-2 pr-4">Validação</th>
                   <th className="py-2 pr-4">Certificado</th>
                 </tr>
               </thead>
@@ -159,6 +183,11 @@ export default async function PalestraDetailPage({
                     <td className="py-2 pr-4">{i.nome}</td>
                     <td className="py-2 pr-4">{formatCpf(i.cpf)}</td>
                     <td className="py-2 pr-4">{i.email}</td>
+                    <td className="py-2 pr-4 font-mono text-xs">
+                      {i.validacaoHash
+                        ? formatValidacaoHashDisplay(i.validacaoHash)
+                        : "—"}
+                    </td>
                     <td className="py-2 pr-4">
                       {i.certificadoEnviado ? (
                         <Badge tone="success">Enviado</Badge>

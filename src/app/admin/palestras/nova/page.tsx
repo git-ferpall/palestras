@@ -11,6 +11,7 @@ import {
   Textarea,
   Button,
   Alert,
+  Checkbox,
 } from "@/components/ui";
 
 const initial: ActionState = {};
@@ -33,30 +34,43 @@ export default function NovaPalestraPage() {
     <Container>
       <PageHeader
         title="Nova palestra"
-        description="Ao salvar, um QR code será gerado para inscrições"
+        description="Certificado em 2 páginas com temas, logos e QR de validação"
       />
 
       {state.error && (
         <div className="mb-4">
-        <Alert type="error">
-          {state.error}
-        </Alert>
+          <Alert type="error">{state.error}</Alert>
         </div>
       )}
 
       <Card>
         <form action={formAction} className="grid gap-4 sm:grid-cols-2">
           <div className="sm:col-span-2">
-            <Label>Título *</Label>
-            <Input name="titulo" required placeholder="Ex: Inteligência Artificial na Prática" />
+            <Label>Título do treinamento *</Label>
+            <Input
+              name="titulo"
+              required
+              placeholder="Ex: Treinamento em Rastreabilidade de Alimentos no Varejo"
+            />
           </div>
           <div className="sm:col-span-2">
-            <Label>Descrição</Label>
-            <Textarea name="descricao" rows={3} placeholder="Conteúdo programático..." />
+            <Label>Subtítulo no certificado</Label>
+            <Input
+              name="subtituloCertificado"
+              placeholder="Ex: Treinamento em Rastreabilidade de Alimentos no Varejo"
+            />
           </div>
           <div className="sm:col-span-2">
+            <Label>Descrição (uso interno)</Label>
+            <Textarea name="descricao" rows={2} />
+          </div>
+          <div>
+            <Label>Cidade/UF no certificado</Label>
+            <Input name="cidadeUf" placeholder="Ex: São Paulo/SP" />
+          </div>
+          <div>
             <Label>Local</Label>
-            <Input name="local" placeholder="Auditório principal" />
+            <Input name="local" placeholder="Auditório, online..." />
           </div>
           <div>
             <Label>Data da palestra *</Label>
@@ -67,8 +81,18 @@ export default function NovaPalestraPage() {
             <Input name="horario" type="time" required />
           </div>
           <div>
-            <Label>Carga horária (horas) *</Label>
-            <Input name="cargaHoraria" type="number" min={1} max={40} defaultValue={2} required />
+            <Label>Carga horária total (horas) *</Label>
+            <Input
+              name="cargaHoraria"
+              type="number"
+              min={1}
+              max={40}
+              defaultValue={1}
+              required
+            />
+            <p className="mt-1 text-xs text-slate-500">
+              Exibida apenas na capa do certificado (não por tema).
+            </p>
           </div>
           <div>
             <Label>QR code válido até *</Label>
@@ -78,10 +102,39 @@ export default function NovaPalestraPage() {
               required
               defaultValue={defaultQrExpiry()}
             />
+          </div>
+
+          <div className="sm:col-span-2 rounded-lg border border-slate-200 bg-slate-50 p-4">
+            <p className="mb-3 text-sm font-medium text-slate-800">
+              Logos no certificado
+            </p>
+            <p className="mb-3 text-xs text-slate-500">
+              Coloque os arquivos em src/logos/abrarastro.png e frutag.png
+            </p>
+            <div className="flex flex-wrap gap-6">
+              <Checkbox name="usarLogoAbrarastro" label="Usar logo Abrarastro" />
+              <Checkbox
+                name="usarLogoFrutag"
+                label="Usar logo Frutag"
+                defaultChecked
+              />
+            </div>
+          </div>
+
+          <div className="sm:col-span-2">
+            <Label>Temas — conteúdo programático (verso do certificado)</Label>
+            <Textarea
+              name="temas"
+              rows={10}
+              placeholder={
+                "Um tema por linha, ex:\nIntrodução à rastreabilidade\nNormativa federal aplicada ao FLV"
+              }
+            />
             <p className="mt-1 text-xs text-slate-500">
-              Após este horário, o QR code não aceita mais inscrições.
+              Listados no verso sem carga horária por tema.
             </p>
           </div>
+
           <div className="sm:col-span-2 flex gap-3 pt-2">
             <Button type="submit" disabled={pending}>
               {pending ? "Salvando..." : "Criar palestra"}

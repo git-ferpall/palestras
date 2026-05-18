@@ -16,19 +16,24 @@ model Admin {
 }
 
 model Palestra {
-  id          String      @id @default(cuid())
-  titulo      String
-  descricao   String?
-  local       String?
-  data        DateTime
-  horario     String
-  cargaHoraria Int        @default(2)
-  qrToken     String      @unique
-  qrExpiraEm  DateTime
-  status      String      @default("AGENDADA")
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
-  inscricoes  Inscricao[]
+  id                   String      @id @default(cuid())
+  titulo               String
+  subtituloCertificado String?
+  descricao            String?
+  local                String?
+  cidadeUf             String?
+  data                 DateTime
+  horario              String
+  cargaHoraria         Int         @default(2)
+  temas                String?
+  usarLogoAbrarastro   Boolean     @default(false)
+  usarLogoFrutag       Boolean     @default(false)
+  qrToken              String      @unique
+  qrExpiraEm           DateTime
+  status               String      @default("AGENDADA")
+  createdAt            DateTime    @default(now())
+  updatedAt            DateTime    @updatedAt
+  inscricoes           Inscricao[]
 }
 
 model Inscricao {
@@ -40,6 +45,7 @@ model Inscricao {
   email               String
   telefone            String
   certificadoCodigo   String   @unique @default(cuid())
+  validacaoHash      String?  @unique
   certificadoEnviado  Boolean  @default(false)
   certificadoEnviadoEm DateTime?
   createdAt           DateTime @default(now())

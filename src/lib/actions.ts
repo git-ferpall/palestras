@@ -12,6 +12,7 @@ import {
   verifyPassword,
 } from "./auth";
 import { sendCertificateEmail } from "./email";
+import { generateValidacaoHash, temasToJson } from "./certificate-utils";
 import {
   formatDateBR,
   isValidCpf,
@@ -26,11 +27,14 @@ const loginSchema = z.object({
 
 const palestraSchema = z.object({
   titulo: z.string().min(3, "Título obrigatório"),
+  subtituloCertificado: z.string().optional(),
   descricao: z.string().optional(),
   local: z.string().optional(),
+  cidadeUf: z.string().optional(),
   data: z.string().min(1, "Data obrigatória"),
   horario: z.string().regex(/^\d{2}:\d{2}$/, "Horário inválido (HH:MM)"),
   cargaHoraria: z.coerce.number().min(1).max(40),
+  temas: z.string().optional(),
   qrExpiraEm: z.string().min(1, "Informe quando o QR code expira"),
 });
 
@@ -87,13 +91,22 @@ export async function createPalestraAction(
     return { error: "Sessão expirada. Faça login novamente." };
   }
 
+  const temasRaw = String(formData.get("temas") ?? "");
+  const temasLines = temasRaw
+    .split("\n")
+    .map((t) => t.trim())
+    .filter(Boolean);
+
   const parsed = palestraSchema.safeParse({
     titulo: formData.get("titulo"),
+    subtituloCertificado: formData.get("subtituloCertificado") || undefined,
     descricao: formData.get("descricao") || undefined,
     local: formData.get("local") || undefined,
+    cidadeUf: formData.get("cidadeUf") || undefined,
     data: formData.get("data"),
     horario: formData.get("horario"),
     cargaHoraria: formData.get("cargaHoraria"),
+    temas: temasRaw || undefined,
     qrExpiraEm: formData.get("qrExpiraEm"),
   });
 
@@ -121,11 +134,16 @@ export async function createPalestraAction(
   await prisma.palestra.create({
     data: {
       titulo: parsed.data.titulo,
+      subtituloCertificado: parsed.data.subtituloCertificado,
       descricao: parsed.data.descricao,
       local: parsed.data.local,
+      cidadeUf: parsed.data.cidadeUf,
       data,
       horario: parsed.data.horario,
       cargaHoraria: parsed.data.cargaHoraria,
+      temas: temasLines.length > 0 ? temasToJson(temasLines) : null,
+      usarLogoAbrarastro: formData.get("usarLogoAbrarastro") === "on",
+      usarLogoFrutag: formData.get("usarLogoFrutag") === "on",
       qrToken,
       qrExpiraEm,
     },
@@ -164,11 +182,21 @@ export async function encerrarPalestraAction(
     let falhas = 0;
 
     for (const inscricao of palestra.inscricoes) {
+      const hash =
+        inscricao.validacaoHash ?? generateValidacaoHash();
+      if (!inscricao.validacaoHash) {
+        await prisma.inscricao.update({
+          where: { id: inscricao.id },
+          data: { validacaoHash: hash },
+        });
+      }
+
       const emailResult = await sendCertificateEmail({
         to: inscricao.email,
         nome: inscricao.nome,
         tituloPalestra: palestra.titulo,
         certificadoCodigo: inscricao.certificadoCodigo,
+        validacaoHash: hash,
       });
 
       if (emailResult.ok) {
@@ -260,6 +288,7 @@ export async function inscricaoAction(
         cpf,
         email: parsed.data.email.trim().toLowerCase(),
         telefone: parsed.data.telefone.replace(/\D/g, ""),
+        validacaoHash: generateValidacaoHash(),
       },
     });
   } catch {

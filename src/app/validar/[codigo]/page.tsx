@@ -1,6 +1,7 @@
 import Link from "next/link";
-import { prisma } from "@/lib/db";
 import { formatDateBR, formatCpf } from "@/lib/utils";
+import { formatValidacaoHashDisplay } from "@/lib/certificate-utils";
+import { findInscricaoByCodigoOuHash } from "@/lib/inscricao-utils";
 import { Container, Card, PageHeader, Alert, Badge } from "@/components/ui";
 
 export default async function ValidarCodigoPage({
@@ -9,13 +10,9 @@ export default async function ValidarCodigoPage({
   params: Promise<{ codigo: string }>;
 }) {
   const { codigo } = await params;
-
-  const inscricao = await prisma.inscricao.findUnique({
-    where: { certificadoCodigo: codigo },
-    include: { palestra: true },
-  });
-
+  const inscricao = await findInscricaoByCodigoOuHash(codigo);
   const valido = !!inscricao && inscricao.palestra.status === "ENCERRADA";
+  const hash = inscricao?.validacaoHash ?? codigo;
 
   return (
     <main className="min-h-screen bg-slate-50">
@@ -51,8 +48,10 @@ export default async function ValidarCodigoPage({
                 </dd>
               </div>
               <div>
-                <dt className="text-slate-500">Código</dt>
-                <dd className="font-mono text-xs break-all">{codigo}</dd>
+                <dt className="text-slate-500">Código de validação</dt>
+                <dd className="font-mono text-sm">
+                  {formatValidacaoHashDisplay(hash)}
+                </dd>
               </div>
             </dl>
           </Card>
