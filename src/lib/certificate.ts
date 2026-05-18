@@ -21,6 +21,7 @@ export type CertificateData = {
   cpf: string;
   tituloPalestra: string;
   subtituloCertificado?: string | null;
+  textoDeclaracaoCertificado?: string | null;
   dataPalestra: string;
   horario: string;
   mesAno: string;
@@ -398,6 +399,22 @@ function drawMetaCard(
   }
 }
 
+function formatDeclaracaoParticipacao(data: CertificateData): string {
+  const padrao = `participou com aproveitamento do treinamento "${data.tituloPalestra}", realizado em ${data.mesAno}, na data de ${data.dataPalestra}, com carga horária total de ${data.cargaHoraria} hora(s).`;
+  const custom = data.textoDeclaracaoCertificado?.trim();
+  if (!custom) return padrao;
+
+  return custom
+    .replace(/\{nome\}/gi, data.nome)
+    .replace(/\{cpf\}/gi, data.cpf)
+    .replace(/\{titulo\}/gi, data.tituloPalestra)
+    .replace(/\{data\}/gi, data.dataPalestra)
+    .replace(/\{mesAno\}/gi, data.mesAno)
+    .replace(/\{horario\}/gi, data.horario)
+    .replace(/\{cargaHoraria\}/gi, String(data.cargaHoraria))
+    .replace(/\{carga\}/gi, String(data.cargaHoraria));
+}
+
 function drawFooter(
   page: PDFPage,
   data: CertificateData,
@@ -548,7 +565,7 @@ async function drawFrontPage(
 
   y = drawWrappedCentered(
     page,
-    `participou com aproveitamento do treinamento "${data.tituloPalestra}", realizado em ${data.mesAno}, na data de ${data.dataPalestra}, com carga horária total de ${data.cargaHoraria} hora(s).`,
+    formatDeclaracaoParticipacao(data),
     y,
     10,
     font,
@@ -734,6 +751,7 @@ export async function generateCertificatePdf(
 type PalestraCert = {
   titulo: string;
   subtituloCertificado?: string | null;
+  textoDeclaracaoCertificado?: string | null;
   data: Date;
   horario: string;
   cargaHoraria: number;
@@ -756,6 +774,7 @@ export function buildCertificateData(
     cpf: formatCpf(inscricao.cpf),
     tituloPalestra: palestra.titulo,
     subtituloCertificado: palestra.subtituloCertificado ?? null,
+    textoDeclaracaoCertificado: palestra.textoDeclaracaoCertificado ?? null,
     dataPalestra: formatDateBR(palestra.data),
     horario: palestra.horario,
     mesAno: formatMonthYearBR(palestra.data),

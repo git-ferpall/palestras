@@ -19,6 +19,7 @@ model Palestra {
   id                   String      @id @default(cuid())
   titulo               String
   subtituloCertificado String?
+  textoDeclaracaoCertificado String?
   descricao            String?
   local                String?
   cidadeUf             String?

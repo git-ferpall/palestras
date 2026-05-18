@@ -61,6 +61,18 @@ export default function NovaPalestraPage() {
             />
           </div>
           <div className="sm:col-span-2">
+            <Label>Texto de participação no certificado</Label>
+            <Textarea
+              name="textoDeclaracaoCertificado"
+              rows={4}
+              placeholder='Deixe em branco para o texto padrão. Ex: participou com aproveitamento do treinamento "{titulo}", realizado em {mesAno}, na data de {data}, com carga horária total de {cargaHoraria} hora(s).'
+            />
+            <p className="mt-1 text-xs text-slate-500">
+              Parágrafo após o nome. Variáveis: {"{nome}"}, {"{titulo}"}, {"{data}"},
+              {"{mesAno}"}, {"{horario}"}, {"{cargaHoraria}"}.
+            </p>
+          </div>
+          <div className="sm:col-span-2">
             <Label>Descrição (uso interno)</Label>
             <Textarea name="descricao" rows={2} />
           </div>

@@ -29,6 +29,7 @@ const loginSchema = z.object({
 const palestraSchema = z.object({
   titulo: z.string().min(3, "Título obrigatório"),
   subtituloCertificado: z.string().optional(),
+  textoDeclaracaoCertificado: z.string().optional(),
   descricao: z.string().optional(),
   local: z.string().optional(),
   cidadeUf: z.string().optional(),
@@ -145,6 +146,8 @@ export async function createPalestraAction(
   const parsed = palestraSchema.safeParse({
     titulo: formData.get("titulo"),
     subtituloCertificado: formData.get("subtituloCertificado") || undefined,
+    textoDeclaracaoCertificado:
+      formData.get("textoDeclaracaoCertificado") || undefined,
     descricao: formData.get("descricao") || undefined,
     local: formData.get("local") || undefined,
     cidadeUf: formData.get("cidadeUf") || undefined,
@@ -180,6 +183,7 @@ export async function createPalestraAction(
     data: {
       titulo: parsed.data.titulo,
       subtituloCertificado: parsed.data.subtituloCertificado,
+      textoDeclaracaoCertificado: parsed.data.textoDeclaracaoCertificado,
       descricao: parsed.data.descricao,
       local: parsed.data.local,
       cidadeUf: parsed.data.cidadeUf,
