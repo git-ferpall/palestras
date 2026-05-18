@@ -74,14 +74,57 @@ src/
 prisma/             # Schema SQLite e seed
 ```
 
-## Produção
+## Produção (Apache — palestras.abrarastro.org)
 
-- Altere `APP_URL` para o domínio real (usado nos QR codes e links de e-mail)
-- Use um `AUTH_SECRET` forte
-- Troque a senha do administrador
-- Considere PostgreSQL em vez de SQLite (`provider = "postgresql"` no Prisma)
+O `index.html` sozinho **não** executa o sistema. É preciso Node.js + proxy reverso no Apache.
+
+### 1. Apache (substitua seu VirtualHost)
 
 ```bash
-npm run build
-npm start
+sudo a2enmod proxy proxy_http rewrite headers
+sudo cp deploy/apache-palestras.conf /etc/apache2/sites-available/palestras.conf
+sudo a2ensite palestras.conf
+sudo systemctl reload apache2
 ```
+
+O arquivo `deploy/apache-palestras.conf` encaminha todo o tráfego de `/` para `http://127.0.0.1:3000` (Next.js).
+
+### 2. Servidor — deploy do código
+
+```bash
+cd /var/www/palestras.abrarastro.org
+# envie o projeto (git clone, rsync, etc.)
+
+cp .env.example .env
+# Edite .env:
+#   APP_URL=https://palestras.abrarastro.org
+#   AUTH_SECRET=...
+#   DATABASE_URL="file:./prisma/production.db"
+
+chmod +x deploy/install-server.sh
+./deploy/install-server.sh
+```
+
+### 3. Manter o app rodando (systemd)
+
+```bash
+sudo cp deploy/palestras.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now palestras
+sudo systemctl status palestras
+```
+
+### 4. HTTPS (recomendado)
+
+```bash
+sudo certbot --apache -d palestras.abrarastro.org
+```
+
+Depois do certificado, use `APP_URL=https://palestras.abrarastro.org` no `.env`.
+
+### Checklist
+
+- `APP_URL` = URL pública (QR codes e e-mails)
+- `AUTH_SECRET` forte; troque senha do admin após o seed
+- Pasta `prisma/` gravável pelo usuário `www-data` (SQLite)
+- SMTP configurado para envio real de certificados
