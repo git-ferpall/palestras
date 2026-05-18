@@ -19,7 +19,8 @@ fi
 [[ -f src/logos/frutag.png ]] && cp -f src/logos/frutag.png public/logos/frutag.png
 
 echo ""
-echo "========== 2. Build =========="
+echo "========== 2. Build (limpa .next antigo) =========="
+rm -rf .next
 npm run build
 
 echo ""

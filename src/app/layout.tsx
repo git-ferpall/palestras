@@ -5,6 +5,10 @@ export const metadata: Metadata = {
   title: "ABRARASTRO — Palestras e certificados",
   description:
     "Associação Brasileira de Rastreabilidade de Alimentos — inscrições, certificados e validação",
+  icons: {
+    icon: "/logos/abrarastro.png",
+    apple: "/logos/abrarastro.png",
+  },
 };
 
 export default function RootLayout({
