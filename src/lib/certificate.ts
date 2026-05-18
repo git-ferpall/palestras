@@ -519,58 +519,59 @@ async function drawFrontPage(
     });
   }
 
+  const gap = { sm: 22, md: 28, lg: 34 };
   const sz = {
-    tituloCert: 22,
-    nome: 30,
-    participou: 16,
-    palestra: 18,
-    data: 16,
+    tituloCert: 30,
+    nome: 48,
+    participou: 26,
+    palestra: 34,
+    data: 26,
   };
 
   const tituloLinha = `${data.tituloPalestra.toUpperCase()} ${formatCargaHorasCertificado(data.cargaHoraria)}`;
   const palestraH = estimateWrappedHeight(
     tituloLinha,
-    fontBold,
+    font,
     sz.palestra,
     contentW,
-    6
+    10
   );
 
   const blockH =
     sz.tituloCert +
-    20 +
+    gap.md +
     sz.nome +
-    18 +
+    gap.lg +
     sz.participou +
-    16 +
+    gap.md +
     palestraH +
-    16 +
+    gap.md +
     sz.data;
 
-  const areaTop = 95;
-  const areaBottom = height - 118;
+  const areaTop = 88;
+  const areaBottom = height - 112;
   let y = areaTop + Math.max(0, (areaBottom - areaTop - blockH) / 2);
 
-  drawCentered(page, "CERTIFICADO DE CONCLUSÃO", y, sz.tituloCert, fontBold, CertColors.greenDark);
-  y += sz.tituloCert + 20;
+  drawCentered(page, "CERTIFICADO DE CONCLUSÃO", y, sz.tituloCert, font, CertColors.muted);
+  y += sz.tituloCert + gap.md;
 
-  drawCentered(page, data.nome, y, sz.nome, fontBold, CertColors.text);
-  y += sz.nome + 18;
+  drawCentered(page, data.nome, y, sz.nome, fontBold, CertColors.ink);
+  y += sz.nome + gap.lg;
 
   drawCentered(page, "Participou da Palestra", y, sz.participou, font, CertColors.muted);
-  y += sz.participou + 16;
+  y += sz.participou + gap.md;
 
   y = drawWrappedCentered(
     page,
     tituloLinha,
     y,
     sz.palestra,
-    fontBold,
-    CertColors.greenDark,
+    font,
+    CertColors.text,
     contentW,
-    6
+    10
   );
-  y += 16;
+  y += gap.md;
 
   drawCentered(page, data.dataPalestra, y, sz.data, font, CertColors.text);
 
@@ -748,8 +749,8 @@ export async function generateCertificatePdf(
   data: CertificateData
 ): Promise<Buffer> {
   const pdfDoc = await PDFDocument.create();
-  const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
-  const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+  const font = await pdfDoc.embedFont(StandardFonts.TimesRoman);
+  const fontBold = await pdfDoc.embedFont(StandardFonts.TimesRomanBold);
 
   const page1 = pdfDoc.addPage(A4_LANDSCAPE);
   await drawFrontPage(page1, pdfDoc, data, font, fontBold);

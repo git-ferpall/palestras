@@ -21,9 +21,11 @@ export const CertColors = {
   greenDark: hexColor("#143d22"),
   gold: hexColor("#c9a227"),
   yellow: hexColor("#f4c430"),
-  text: hexColor("#334155"),
-  muted: hexColor("#64748b"),
-  faint: hexColor("#94a3b8"),
+  /** Texto principal (estilo serif cinza do certificado) */
+  ink: hexColor("#2d3748"),
+  text: hexColor("#374151"),
+  muted: hexColor("#6b7280"),
+  faint: hexColor("#9ca3af"),
 };
 
 export function formatCargaHorasCertificado(h: number) {
@@ -169,17 +171,17 @@ export async function drawAbrarastroWatermark(
   if (!img) return;
 
   const { width, height } = page.getSize();
-  const targetW = width * 0.55;
+  const targetW = width * 0.62;
   const scale = targetW / img.width;
   const w = img.width * scale;
   const h = img.height * scale;
 
   page.drawImage(img, {
     x: (width - w) / 2,
-    y: (height - h) / 2,
+    y: (height - h) / 2 - 12,
     width: w,
     height: h,
-    opacity: 0.07,
+    opacity: 0.1,
   });
 }
 
@@ -199,7 +201,7 @@ export function drawSignatureLine(
     thickness: 0.7,
     color: CertColors.muted,
   });
-  const labelSize = 9;
+  const labelSize = 11;
   const lw = fontBold.widthOfTextAtSize(label, labelSize);
   page.drawText(label, {
     x: centerX - lw / 2,
