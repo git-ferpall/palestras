@@ -19,6 +19,7 @@ function hexColor(hex: string): RGB {
 export const CertColors = {
   green: hexColor("#1e5631"),
   greenDark: hexColor("#143d22"),
+  greenLight: hexColor("#e8f3ec"),
   gold: hexColor("#c9a227"),
   yellow: hexColor("#f4c430"),
   /** Texto principal (estilo serif cinza do certificado) */
@@ -26,6 +27,7 @@ export const CertColors = {
   text: hexColor("#374151"),
   muted: hexColor("#6b7280"),
   faint: hexColor("#9ca3af"),
+  white: rgb(1, 1, 1),
 };
 
 export function formatCargaHorasCertificado(h: number) {

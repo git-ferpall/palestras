@@ -48,9 +48,9 @@ const L = {
   left: 56,
   right: 56,
   bottom: 44,
-  qrSize: 62,
-  qrPad: 8,
-  qrReserve: 138,
+  qrSize: 82,
+  qrPad: 10,
+  qrReserve: 168,
 };
 
 function hexColor(hex: string): RGB {
@@ -415,8 +415,8 @@ async function drawValidationBlock(
   const { width } = page.getSize();
   const qrSize = L.qrSize;
   const pad = L.qrPad;
-  const labelH = 11;
-  const hashH = 10;
+  const labelH = 13;
+  const hashH = 12;
   const blockW = qrSize + pad * 2;
   const blockH = qrSize + pad * 2 + labelH + hashH;
   const blockX = width - L.right - blockW;
@@ -427,13 +427,13 @@ async function drawValidationBlock(
     y: blockY,
     width: blockW,
     height: blockH,
-    color: C.paper,
-    borderColor: C.teal,
-    borderWidth: 0.6,
+    color: rgb(0.97, 0.98, 0.97),
+    borderColor: CertColors.green,
+    borderWidth: 0.8,
   });
 
   const label = "VALIDAÇÃO";
-  const labelSize = 7;
+  const labelSize = 8;
   page.drawText(label, {
     x:
       blockX +
@@ -441,12 +441,12 @@ async function drawValidationBlock(
     y: blockY + blockH - labelH,
     size: labelSize,
     font: fontBold,
-    color: C.teal,
+    color: CertColors.green,
   });
 
   const url = `${getAppUrl()}/validar/${validacaoHash}`;
   const qrBuffer = await QRCode.toBuffer(url, {
-    width: 160,
+    width: 240,
     margin: 1,
     type: "png",
   });
@@ -461,14 +461,14 @@ async function drawValidationBlock(
   });
 
   const hashText = formatValidacaoHashDisplay(validacaoHash);
-  const hashSize = 6.5;
+  const hashSize = 7.5;
   const hashW = font.widthOfTextAtSize(hashText, hashSize);
   page.drawText(hashText, {
     x: blockX + (blockW - hashW) / 2,
-    y: blockY + 3,
+    y: blockY + 4,
     size: hashSize,
     font,
-    color: C.muted,
+    color: CertColors.muted,
   });
 }
 
@@ -627,7 +627,7 @@ async function drawBackPage(
     y: yTop(height, y, 12),
     size: 12,
     font: fontBold,
-    color: CertColors.greenDark,
+    color: CertColors.green,
   });
   y += 18;
   const temaLines = wrapLines(data.tituloPalestra, font, 10, width - tableLeft - L.right - 20);
@@ -658,21 +658,21 @@ async function drawBackPage(
     y: yTop(height, y, headerRowH),
     width: tableW,
     height: headerRowH,
-    color: C.navy,
+    color: CertColors.green,
   });
   page.drawText("Nº", {
     x: tableLeft + 14,
     y: yTop(height, y + 8, 10),
     size: 10,
     font: fontBold,
-    color: C.white,
+    color: CertColors.white,
   });
   page.drawText("TEMA ABORDADO", {
     x: temaX + 10,
     y: yTop(height, y + 8, 10),
     size: 10,
     font: fontBold,
-    color: C.white,
+    color: CertColors.white,
   });
   y += headerRowH;
 
@@ -695,7 +695,7 @@ async function drawBackPage(
         y: yTop(height, y, rowH),
         width: tableW,
         height: rowH,
-        color: C.rowAlt,
+        color: CertColors.greenLight,
       });
     }
 
@@ -704,7 +704,7 @@ async function drawBackPage(
       y: yTop(height, y, rowH),
       width: tableW,
       height: rowH,
-      borderColor: C.faint,
+      borderColor: CertColors.faint,
       borderWidth: 0.4,
     });
 
@@ -713,7 +713,7 @@ async function drawBackPage(
       y: yTop(height, y + padTop + fontSize - 2, fontSize),
       size: fontSize,
       font: fontBold,
-      color: C.teal,
+      color: CertColors.green,
     });
 
     let lineY = y + padTop;
@@ -723,7 +723,7 @@ async function drawBackPage(
         y: yTop(height, lineY, fontSize),
         size: fontSize,
         font,
-        color: C.slate,
+        color: CertColors.text,
       });
       lineY += lineGap;
     }
@@ -736,7 +736,7 @@ async function drawBackPage(
     y: yTop(height, footerY, footerRowH),
     width: tableW,
     height: footerRowH,
-    color: C.teal,
+    color: CertColors.greenDark,
   });
   page.drawText(
     `Carga horária total: ${data.cargaHoraria} hora(s)  •  Horário: ${data.horario}`,
@@ -745,7 +745,7 @@ async function drawBackPage(
       y: yTop(height, footerY + 9, 10),
       size: 10,
       font: fontBold,
-      color: C.white,
+      color: CertColors.white,
     }
   );
 }
