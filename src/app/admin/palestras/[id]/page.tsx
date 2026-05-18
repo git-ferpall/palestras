@@ -15,6 +15,7 @@ import {
   Alert,
 } from "@/components/ui";
 import { EncerrarPalestraButton } from "./encerrar-button";
+import { ExcluirPalestraButton } from "./excluir-button";
 
 export default async function PalestraDetailPage({
   params,
@@ -201,6 +202,18 @@ export default async function PalestraDetailPage({
             </table>
           </div>
         )}
+      </Card>
+
+      <Card className="mt-6 border-red-200 bg-red-50/50">
+        <h3 className="mb-2 font-semibold text-red-900">Zona de perigo</h3>
+        <p className="mb-4 text-sm text-red-800">
+          Excluir remove a palestra e todas as inscrições. Não é possível desfazer.
+        </p>
+        <ExcluirPalestraButton
+          palestraId={palestra.id}
+          titulo={palestra.titulo}
+          totalInscritos={palestra.inscricoes.length}
+        />
       </Card>
     </Container>
   );

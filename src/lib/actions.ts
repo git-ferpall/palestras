@@ -344,3 +344,29 @@ export async function inscricaoAction(
     success: `Inscrição confirmada na palestra "${palestra.titulo}" (${formatDateBR(palestra.data)} às ${palestra.horario}). Após o evento, você receberá o certificado por e-mail.`,
   };
 }
+
+export async function deletePalestraAction(
+  palestraId: string
+): Promise<ActionState> {
+  try {
+    await requireAdmin();
+  } catch {
+    return { error: "Sessão expirada. Faça login novamente." };
+  }
+
+  const palestra = await prisma.palestra.findUnique({
+    where: { id: palestraId },
+    select: { id: true, titulo: true },
+  });
+
+  if (!palestra) {
+    return { error: "Palestra não encontrada" };
+  }
+
+  await prisma.palestra.delete({ where: { id: palestraId } });
+
+  revalidatePath("/admin");
+  redirect(
+    `/admin?msg=${encodeURIComponent(`Palestra "${palestra.titulo}" excluída.`)}`
+  );
+}

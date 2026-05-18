@@ -8,15 +8,22 @@ import {
   Card,
   Button,
   Badge,
+  Alert,
 } from "@/components/ui";
 import { formatDateBR, formatDateTimeBR } from "@/lib/utils";
 
-export default async function AdminDashboardPage() {
+export default async function AdminDashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ msg?: string }>;
+}) {
   const admin = await getSessionAdmin();
   if (!admin) redirect("/admin/login");
 
+  const { msg } = await searchParams;
+
   const palestras = await prisma.palestra.findMany({
-    orderBy: { data: "desc" },
+    orderBy: [{ status: "asc" }, { data: "desc" }],
     include: { _count: { select: { inscricoes: true } } },
   });
 
@@ -25,12 +32,26 @@ export default async function AdminDashboardPage() {
       <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
         <PageHeader
           title="Palestras"
-          description="Gerencie eventos, inscrições e certificados"
+          description="Agendadas primeiro — depois encerradas"
         />
         <Link href="/admin/palestras/nova">
           <Button>Nova palestra</Button>
         </Link>
       </div>
+
+      {msg && (
+        <div className="mb-6">
+          <Alert type="success">
+            {(() => {
+              try {
+                return decodeURIComponent(msg);
+              } catch {
+                return msg;
+              }
+            })()}
+          </Alert>
+        </div>
+      )}
 
       {palestras.length === 0 ? (
         <Card>
