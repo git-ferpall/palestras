@@ -1,6 +1,12 @@
 import fs from "fs";
-import path from "path";
-import { createRequire } from "module";
+import {
+  PDFDocument,
+  rgb,
+  StandardFonts,
+  type PDFPage,
+  type PDFFont,
+  type RGB,
+} from "pdf-lib";
 import QRCode from "qrcode";
 import { getAppUrl } from "./utils";
 import {
@@ -9,24 +15,6 @@ import {
   parseTemasJson,
   formatMonthYearBR,
 } from "./certificate-utils";
-
-type PdfKitCtor = typeof import("pdfkit");
-type PdfDoc = InstanceType<PdfKitCtor>;
-
-/** Carrega pdfkit do node_modules (evita bundle que quebra caminho das fontes .afm) */
-function createPdfDocument(options?: ConstructorParameters<PdfKitCtor>[0]): PdfDoc {
-  const dataDir = path.join(process.cwd(), "node_modules/pdfkit/js/data");
-  if (!fs.existsSync(path.join(dataDir, "Helvetica.afm"))) {
-    throw new Error(
-      `Fontes PDFKit não encontradas em ${dataDir}. Rode: npm install pdfkit`
-    );
-  }
-  process.env.PDFKIT_FONT_PATH = dataDir;
-
-  const requirePdf = createRequire(path.join(process.cwd(), "package.json"));
-  const PDFDocument = requirePdf("pdfkit") as PdfKitCtor;
-  return new PDFDocument(options);
-}
 
 export type CertificateData = {
   nome: string;
@@ -45,219 +33,408 @@ export type CertificateData = {
   validacaoHash: string;
 };
 
-const COLORS = {
-  blue: "#1e3a8a",
-  teal: "#0d9488",
-  slate: "#334155",
-  muted: "#64748b",
-};
+const A4: [number, number] = [595.28, 841.89];
 
-function drawBorder(doc: PdfDoc) {
-  const m = 28;
-  const w = doc.page.width - m * 2;
-  const h = doc.page.height - m * 2;
-  doc.rect(m, m, w, h).lineWidth(2).strokeColor(COLORS.blue).stroke();
-  doc
-    .rect(m + 6, m + 6, w - 12, h - 12)
-    .lineWidth(0.8)
-    .strokeColor(COLORS.teal)
-    .stroke();
+function hex(hexColor: string): RGB {
+  const n = hexColor.replace("#", "");
+  return rgb(
+    parseInt(n.slice(0, 2), 16) / 255,
+    parseInt(n.slice(2, 4), 16) / 255,
+    parseInt(n.slice(4, 6), 16) / 255
+  );
 }
 
-function drawLogos(doc: PdfDoc, usarAbrarastro: boolean, usarFrutag: boolean) {
-  const y = 42;
+const COLORS = {
+  blue: hex("#1e3a8a"),
+  teal: hex("#0d9488"),
+  slate: hex("#334155"),
+  muted: hex("#64748b"),
+  white: rgb(1, 1, 1),
+  rowAlt: rgb(0.945, 0.961, 0.976),
+};
+
+function topY(pageHeight: number, yFromTop: number, size = 12) {
+  return pageHeight - yFromTop - size;
+}
+
+function drawBorder(page: PDFPage) {
+  const { width, height } = page.getSize();
+  const m = 28;
+  page.drawRectangle({
+    x: m,
+    y: m,
+    width: width - m * 2,
+    height: height - m * 2,
+    borderColor: COLORS.blue,
+    borderWidth: 2,
+  });
+  page.drawRectangle({
+    x: m + 6,
+    y: m + 6,
+    width: width - (m + 6) * 2,
+    height: height - (m + 6) * 2,
+    borderColor: COLORS.teal,
+    borderWidth: 0.8,
+  });
+}
+
+async function embedLogo(pdfDoc: PDFDocument, baseName: string) {
+  const p = resolveLogoPath(baseName);
+  if (!p) return null;
+  const bytes = fs.readFileSync(p);
+  if (p.endsWith(".jpg") || p.endsWith(".jpeg")) {
+    return pdfDoc.embedJpg(bytes);
+  }
+  return pdfDoc.embedPng(bytes);
+}
+
+async function drawLogos(
+  page: PDFPage,
+  pdfDoc: PDFDocument,
+  usarAbrarastro: boolean,
+  usarFrutag: boolean
+) {
+  const { width, height } = page.getSize();
   const logoH = 48;
 
-  try {
-    if (usarAbrarastro) {
-      const p = resolveLogoPath("abrarastro");
-      if (p) doc.image(p, 50, y, { height: logoH });
+  if (usarAbrarastro) {
+    try {
+      const img = await embedLogo(pdfDoc, "abrarastro");
+      if (img) {
+        const scale = logoH / img.height;
+        page.drawImage(img, {
+          x: 50,
+          y: topY(height, 42, logoH),
+          width: img.width * scale,
+          height: logoH,
+        });
+      }
+    } catch (e) {
+      console.warn("Logo abrarastro:", e);
     }
-    if (usarFrutag) {
-      const p = resolveLogoPath("frutag");
-      if (p) doc.image(p, doc.page.width - 150, y, { height: logoH });
+  }
+
+  if (usarFrutag) {
+    try {
+      const img = await embedLogo(pdfDoc, "frutag");
+      if (img) {
+        const scale = logoH / img.height;
+        const w = img.width * scale;
+        page.drawImage(img, {
+          x: width - 50 - w,
+          y: topY(height, 42, logoH),
+          width: w,
+          height: logoH,
+        });
+      }
+    } catch (e) {
+      console.warn("Logo frutag:", e);
     }
-  } catch (e) {
-    console.warn("Logo não carregado:", e);
   }
 }
 
 async function drawValidationQr(
-  doc: PdfDoc,
+  page: PDFPage,
+  pdfDoc: PDFDocument,
   validacaoHash: string,
   x: number,
-  y: number
+  yFromTop: number,
+  font: PDFFont
 ) {
+  const { height } = page.getSize();
   const url = `${getAppUrl()}/validar/${validacaoHash}`;
   const qrBuffer = await QRCode.toBuffer(url, {
     width: 140,
     margin: 1,
     type: "png",
   });
-  doc.image(qrBuffer, x, y, { width: 76, height: 76 });
-  doc
-    .fontSize(7)
-    .fillColor(COLORS.muted)
-    .text(formatValidacaoHashDisplay(validacaoHash), x - 8, y + 78, {
-      width: 92,
-      align: "center",
-    });
-  doc.fontSize(6).text("Validação", x, y + 88, { width: 92, align: "center" });
+  const qrImage = await pdfDoc.embedPng(qrBuffer);
+  const qrSize = 76;
+  const y = topY(height, yFromTop, qrSize);
+  page.drawImage(qrImage, { x, y, width: qrSize, height: qrSize });
+
+  const hashText = formatValidacaoHashDisplay(validacaoHash);
+  const hashSize = 7;
+  const hashWidth = font.widthOfTextAtSize(hashText, hashSize);
+  page.drawText(hashText, {
+    x: x + (qrSize - hashWidth) / 2,
+    y: y - 12,
+    size: hashSize,
+    font,
+    color: COLORS.muted,
+  });
 }
 
-function drawFrontPage(doc: PdfDoc, data: CertificateData) {
-  drawBorder(doc);
-  drawLogos(doc, data.usarLogoAbrarastro, data.usarLogoFrutag);
+function drawCentered(
+  page: PDFPage,
+  text: string,
+  yFromTop: number,
+  size: number,
+  font: PDFFont,
+  color: RGB
+) {
+  const { width, height } = page.getSize();
+  const textWidth = font.widthOfTextAtSize(text, size);
+  page.drawText(text, {
+    x: (width - textWidth) / 2,
+    y: topY(height, yFromTop, size),
+    size,
+    font,
+    color,
+  });
+}
 
-  const w = doc.page.width - 100;
+function drawCenteredWrapped(
+  page: PDFPage,
+  text: string,
+  yFromTop: number,
+  size: number,
+  font: PDFFont,
+  color: RGB,
+  maxWidth: number
+) {
+  const { width, height } = page.getSize();
+  const words = text.split(" ");
+  const lines: string[] = [];
+  let line = "";
+  for (const word of words) {
+    const test = line ? `${line} ${word}` : word;
+    if (font.widthOfTextAtSize(test, size) > maxWidth && line) {
+      lines.push(line);
+      line = word;
+    } else {
+      line = test;
+    }
+  }
+  if (line) lines.push(line);
+  let y = yFromTop;
+  for (const ln of lines) {
+    const tw = font.widthOfTextAtSize(ln, size);
+    page.drawText(ln, {
+      x: (width - tw) / 2,
+      y: topY(height, y, size),
+      size,
+      font,
+      color,
+    });
+    y += size + 4;
+  }
+}
 
-  doc
-    .fontSize(22)
-    .fillColor(COLORS.blue)
-    .text("CERTIFICADO DE PARTICIPAÇÃO", 50, 108, { align: "center", width: w });
+async function drawFrontPage(
+  page: PDFPage,
+  pdfDoc: PDFDocument,
+  data: CertificateData,
+  font: PDFFont,
+  fontBold: PDFFont
+) {
+  const { width, height } = page.getSize();
+  drawBorder(page);
+  await drawLogos(page, pdfDoc, data.usarLogoAbrarastro, data.usarLogoFrutag);
+
+  drawCentered(page, "CERTIFICADO DE PARTICIPAÇÃO", 108, 22, fontBold, COLORS.blue);
 
   if (data.subtituloCertificado) {
-    doc
-      .fontSize(12)
-      .fillColor(COLORS.teal)
-      .text(data.subtituloCertificado, 50, 138, { align: "center", width: w });
+    drawCentered(page, data.subtituloCertificado, 138, 12, font, COLORS.teal);
   }
 
   const introY = data.subtituloCertificado ? 168 : 150;
-  doc
-    .fontSize(10)
-    .fillColor(COLORS.slate)
-    .text(
-      "A Associação Brasileira de Rastreabilidade de Alimentos (ABRARASTRO) certifica que",
-      50,
-      introY,
-      { align: "center", width: w }
-    );
+  drawCenteredWrapped(
+    page,
+    "A Associação Brasileira de Rastreabilidade de Alimentos (ABRARASTRO) certifica que",
+    introY,
+    10,
+    font,
+    COLORS.slate,
+    width - 100
+  );
 
-  doc
-    .fontSize(20)
-    .fillColor(COLORS.blue)
-    .text(data.nome.toUpperCase(), 50, introY + 28, { align: "center", width: w });
+  drawCentered(page, data.nome.toUpperCase(), introY + 32, 20, fontBold, COLORS.blue);
 
-  doc
-    .fontSize(10)
-    .fillColor(COLORS.slate)
-    .text(
-      `participou do treinamento "${data.tituloPalestra}", realizado em ${data.mesAno}, com carga horária total de ${data.cargaHoraria} hora(s).`,
-      60,
-      introY + 62,
-      { align: "center", width: w - 20 }
-    );
+  drawCenteredWrapped(
+    page,
+    `participou do treinamento "${data.tituloPalestra}", realizado em ${data.mesAno}, com carga horária total de ${data.cargaHoraria} hora(s).`,
+    introY + 62,
+    10,
+    font,
+    COLORS.slate,
+    width - 120
+  );
 
   const metaY = introY + 108;
   const cidade = data.cidadeUf || data.local || "—";
-  doc.fontSize(9).fillColor(COLORS.muted);
-  doc.text(`Local: ${cidade}`, 70, metaY);
-  doc.text(`Data: ${data.dataPalestra}`, 220, metaY);
-  doc.text(`Carga horária total: ${data.cargaHoraria} hora(s)`, 370, metaY);
+  page.drawText(`Local: ${cidade}`, {
+    x: 70,
+    y: topY(height, metaY, 9),
+    size: 9,
+    font,
+    color: COLORS.muted,
+  });
+  page.drawText(`Data: ${data.dataPalestra}`, {
+    x: 220,
+    y: topY(height, metaY, 9),
+    size: 9,
+    font,
+    color: COLORS.muted,
+  });
+  page.drawText(`Carga horária total: ${data.cargaHoraria}h`, {
+    x: 370,
+    y: topY(height, metaY, 9),
+    size: 9,
+    font,
+    color: COLORS.muted,
+  });
 
-  doc
-    .fontSize(8)
-    .fillColor(COLORS.muted)
-    .text(
-      "Realização: ABRARASTRO — Associação Brasileira de Rastreabilidade de Alimentos",
-      50,
-      500,
-      { align: "center", width: w }
-    );
+  drawCenteredWrapped(
+    page,
+    "Realização: ABRARASTRO — Associação Brasileira de Rastreabilidade de Alimentos",
+    500,
+    8,
+    font,
+    COLORS.muted,
+    width - 100
+  );
 
   if (data.usarLogoFrutag) {
-    doc.text("Apoio técnico: Frutag — Rastreabilidade faz bem!", 50, 512, {
-      align: "center",
-      width: w,
-    });
+    drawCentered(
+      page,
+      "Apoio técnico: Frutag — Rastreabilidade faz bem!",
+      512,
+      8,
+      font,
+      COLORS.muted
+    );
   }
 }
 
-function drawBackPage(doc: PdfDoc, data: CertificateData) {
-  doc.addPage({
-    size: "A4",
-    layout: "portrait",
-    margins: { top: 28, bottom: 28, left: 28, right: 28 },
+function drawBackPage(
+  page: PDFPage,
+  data: CertificateData,
+  font: PDFFont,
+  fontBold: PDFFont
+) {
+  const { width, height } = page.getSize();
+  drawBorder(page);
+
+  drawCentered(page, "CONTEÚDO PROGRAMÁTICO", 50, 18, fontBold, COLORS.blue);
+  drawCentered(page, data.tituloPalestra, 78, 10, font, COLORS.teal);
+
+  const tableLeft = 50;
+  const colNumW = 36;
+  const tableW = width - 100;
+  const temaX = tableLeft + colNumW;
+  const temaW = tableW - colNumW;
+  let yFromTop = 108;
+
+  page.drawRectangle({
+    x: tableLeft,
+    y: topY(height, yFromTop, 20),
+    width: tableW,
+    height: 20,
+    color: COLORS.blue,
   });
-  drawBorder(doc);
+  page.drawText("Nº", {
+    x: tableLeft + 10,
+    y: topY(height, yFromTop + 6, 9),
+    size: 9,
+    font: fontBold,
+    color: COLORS.white,
+  });
+  page.drawText("Tema abordado", {
+    x: temaX + 5,
+    y: topY(height, yFromTop + 6, 9),
+    size: 9,
+    font: fontBold,
+    color: COLORS.white,
+  });
 
-  const w = doc.page.width - 100;
-  doc
-    .fontSize(18)
-    .fillColor(COLORS.blue)
-    .text("CONTEÚDO PROGRAMÁTICO", 50, 50, { align: "center", width: w });
-
-  doc
-    .fontSize(10)
-    .fillColor(COLORS.teal)
-    .text(data.tituloPalestra, 50, 78, { align: "center", width: w });
-
-  const tableTop = 108;
-  const colMod = 50;
-  const colTema = 95;
-  const colWMod = 36;
-  const colWTema = doc.page.width - 145;
-
-  doc.rect(colMod, tableTop, colWMod + colWTema, 20).fill(COLORS.blue);
-  doc.fillColor("#fff").fontSize(9);
-  doc.text("Nº", colMod + 10, tableTop + 5);
-  doc.text("Tema abordado", colTema, tableTop + 5);
-
-  let rowY = tableTop + 20;
+  yFromTop += 20;
   const temas =
     data.temas.length > 0 ? data.temas : ["Conteúdo conforme programação do evento"];
 
   temas.forEach((tema, i) => {
-    const rowH = Math.max(20, doc.heightOfString(tema, { width: colWTema - 12 }) + 8);
-    if (i % 2 === 0) {
-      doc.rect(colMod, rowY, colWMod + colWTema, rowH).fill("#f1f5f9");
+    const lines: string[] = [];
+    const words = tema.split(" ");
+    let line = "";
+    for (const word of words) {
+      const test = line ? `${line} ${word}` : word;
+      if (font.widthOfTextAtSize(test, 8) > temaW - 12 && line) {
+        lines.push(line);
+        line = word;
+      } else {
+        line = test;
+      }
     }
-    doc.fillColor(COLORS.slate).fontSize(8);
-    doc.text(String(i + 1), colMod + 10, rowY + 5);
-    doc.text(tema, colTema, rowY + 5, { width: colWTema - 12 });
-    rowY += rowH;
+    if (line) lines.push(line);
+    const rowH = Math.max(20, lines.length * 10 + 8);
+
+    if (i % 2 === 0) {
+      page.drawRectangle({
+        x: tableLeft,
+        y: topY(height, yFromTop, rowH),
+        width: tableW,
+        height: rowH,
+        color: COLORS.rowAlt,
+      });
+    }
+
+    page.drawText(String(i + 1), {
+      x: tableLeft + 10,
+      y: topY(height, yFromTop + 5, 8),
+      size: 8,
+      font,
+      color: COLORS.slate,
+    });
+
+    let lineY = yFromTop + 5;
+    for (const ln of lines) {
+      page.drawText(ln, {
+        x: temaX + 5,
+        y: topY(height, lineY, 8),
+        size: 8,
+        font,
+        color: COLORS.slate,
+      });
+      lineY += 10;
+    }
+
+    yFromTop += rowH;
   });
 
-  doc.rect(colMod, rowY, colWMod + colWTema, 22).fill(COLORS.teal);
-  doc
-    .fillColor("#fff")
-    .fontSize(9)
-    .text(`Carga horária total: ${data.cargaHoraria} hora(s)`, colTema, rowY + 6);
+  page.drawRectangle({
+    x: tableLeft,
+    y: topY(height, yFromTop, 22),
+    width: tableW,
+    height: 22,
+    color: COLORS.teal,
+  });
+  page.drawText(`Carga horária total: ${data.cargaHoraria} hora(s)`, {
+    x: temaX + 5,
+    y: topY(height, yFromTop + 6, 9),
+    size: 9,
+    font: fontBold,
+    color: COLORS.white,
+  });
 }
 
 export async function generateCertificatePdf(
   data: CertificateData
 ): Promise<Buffer> {
-  return new Promise((resolve, reject) => {
-    const doc = createPdfDocument({
-      size: "A4",
-      layout: "portrait",
-      margins: { top: 28, bottom: 28, left: 28, right: 28 },
-    });
+  const pdfDoc = await PDFDocument.create();
+  const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+  const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
 
-    const chunks: Buffer[] = [];
-    doc.on("data", (chunk) => chunks.push(chunk));
-    doc.on("end", () => resolve(Buffer.concat(chunks)));
-    doc.on("error", reject);
+  const page1 = pdfDoc.addPage(A4);
+  await drawFrontPage(page1, pdfDoc, data, font, fontBold);
+  await drawValidationQr(page1, pdfDoc, data.validacaoHash, 477, 420, font);
 
-    (async () => {
-      try {
-        drawFrontPage(doc, data);
-        await drawValidationQr(doc, data.validacaoHash, doc.page.width - 118, 420);
-        drawBackPage(doc, data);
-        await drawValidationQr(
-          doc,
-          data.validacaoHash,
-          doc.page.width - 118,
-          doc.page.height - 130
-        );
-        doc.end();
-      } catch (err) {
-        reject(err);
-      }
-    })();
-  });
+  const page2 = pdfDoc.addPage(A4);
+  drawBackPage(page2, data, font, fontBold);
+  const h2 = page2.getSize().height;
+  await drawValidationQr(page2, pdfDoc, data.validacaoHash, 477, h2 - 130, font);
+
+  const bytes = await pdfDoc.save();
+  return Buffer.from(bytes);
 }
 
 type PalestraCert = {
