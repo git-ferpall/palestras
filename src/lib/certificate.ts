@@ -236,7 +236,6 @@ async function drawLogosInBand(
   page: PDFPage,
   pdfDoc: PDFDocument,
   usarFrutag: boolean,
-  font: PDFFont,
   fontBold: PDFFont
 ) {
   const { width, height } = page.getSize();
@@ -248,14 +247,6 @@ async function drawLogosInBand(
   if (abra) {
     const scale = logoH / abra.height;
     const w = abra.width * scale;
-    page.drawRectangle({
-      x: L.left - 4,
-      y: y - 4,
-      width: w + 8,
-      height: logoH + 8,
-      color: rgb(1, 1, 1),
-      opacity: 0.92,
-    });
     page.drawImage(abra, { x: L.left, y, width: w, height: logoH });
   } else {
     page.drawText("ABRARASTRO", {
@@ -273,53 +264,58 @@ async function drawLogosInBand(
       const scale = logoH / img.height;
       const w = img.width * scale;
       const logoX = width - L.right - w;
-      page.drawRectangle({
-        x: logoX - 4,
-        y: y - 4,
-        width: w + 8,
-        height: logoH + 8,
-        color: rgb(1, 1, 1),
-        opacity: 0.92,
-      });
       page.drawImage(img, { x: logoX, y, width: w, height: logoH });
     }
-    drawFrutagApoioText(page, width, font, fontBold);
   }
 }
 
-/** Texto de apoio Frutag (canto superior direito, abaixo da faixa). */
-function drawFrutagApoioText(
+/** Bloco de rodapé: linha + título + subtítulo centralizados. */
+function drawFooterBlock(
   page: PDFPage,
-  pageWidth: number,
+  centerX: number,
+  blockWidth: number,
+  baseY: number,
+  title: string,
+  subtitle: string,
   font: PDFFont,
-  fontBold: PDFFont
+  fontBold: PDFFont,
+  titleColor: RGB = C.navy,
+  subtitleColor: RGB = C.slate
 ) {
-  const label = "Apoio técnico";
-  const brand = "FRUTAG";
-  const labelSize = 7;
-  const brandSize = 11;
-  const blockW = Math.max(
-    font.widthOfTextAtSize(label, labelSize),
-    fontBold.widthOfTextAtSize(brand, brandSize)
-  );
-  const x = pageWidth - L.right - blockW;
-  const yBrand = yTop(page.getSize().height, 98, brandSize);
-  const yLabel = yBrand - brandSize - 3;
+  const titleSize = 11;
+  const subtitleSize = 8;
+  const lineY = baseY + 46;
+  const lineHalf = blockWidth / 2;
 
-  page.drawText(label, {
-    x,
-    y: yLabel,
-    size: labelSize,
-    font,
-    color: C.muted,
-  });
-  page.drawText(brand, {
-    x,
-    y: yBrand,
-    size: brandSize,
-    font: fontBold,
+  page.drawLine({
+    start: { x: centerX - lineHalf, y: lineY },
+    end: { x: centerX + lineHalf, y: lineY },
+    thickness: 0.6,
     color: C.teal,
   });
+
+  const titleW = fontBold.widthOfTextAtSize(title, titleSize);
+  page.drawText(title, {
+    x: centerX - titleW / 2,
+    y: lineY - titleSize - 6,
+    size: titleSize,
+    font: fontBold,
+    color: titleColor,
+  });
+
+  const subLines = wrapLines(subtitle, font, subtitleSize, blockWidth - 16);
+  let subY = lineY - titleSize - 6 - subtitleSize - 4;
+  for (const ln of subLines) {
+    const lnW = font.widthOfTextAtSize(ln, subtitleSize);
+    page.drawText(ln, {
+      x: centerX - lnW / 2,
+      y: subY - subtitleSize,
+      size: subtitleSize,
+      font,
+      color: subtitleColor,
+    });
+    subY -= subtitleSize + 3;
+  }
 }
 
 function drawOrnamentLine(page: PDFPage, fromTop: number) {
@@ -408,46 +404,35 @@ function drawFooter(
   font: PDFFont,
   fontBold: PDFFont
 ) {
-  const x = L.left;
+  const { width } = page.getSize();
   const base = L.bottom;
+  const blockW = 268;
+  const contentRight = width - L.right - L.qrReserve;
 
-  const frutagExtra = data.usarLogoFrutag ? 22 : 0;
-
-  page.drawLine({
-    start: { x, y: base + 46 + frutagExtra },
-    end: { x: 300, y: base + 46 + frutagExtra },
-    thickness: 0.6,
-    color: C.teal,
-  });
-  page.drawText("ABRARASTRO", {
-    x,
-    y: base + 30 + frutagExtra,
-    size: 11,
-    font: fontBold,
-    color: C.navy,
-  });
-  page.drawText("Associação Brasileira de Rastreabilidade de Alimentos", {
-    x,
-    y: base + 16 + frutagExtra,
-    size: 8,
+  const leftCenter = L.left + blockW / 2;
+  drawFooterBlock(
+    page,
+    leftCenter,
+    blockW,
+    base,
+    "ABRARASTRO",
+    "Associação Brasileira de Rastreabilidade de Alimentos",
     font,
-    color: C.slate,
-  });
+    fontBold
+  );
+
   if (data.usarLogoFrutag) {
-    page.drawText("Apoio técnico", {
-      x,
-      y: base + 2,
-      size: 7,
+    const rightCenter = contentRight - blockW / 2;
+    drawFooterBlock(
+      page,
+      rightCenter,
+      blockW,
+      base,
+      "FRUTAG",
+      "Apoio técnico",
       font,
-      color: C.muted,
-    });
-    page.drawText("FRUTAG", {
-      x,
-      y: base + 12,
-      size: 10,
-      font: fontBold,
-      color: C.teal,
-    });
+      fontBold
+    );
   }
 }
 
@@ -530,7 +515,7 @@ async function drawFrontPage(
 
   drawProfessionalFrame(page);
   drawHeaderBand(page);
-  await drawLogosInBand(page, pdfDoc, data.usarLogoFrutag, font, fontBold);
+  await drawLogosInBand(page, pdfDoc, data.usarLogoFrutag, fontBold);
 
   let y = 108;
   drawCentered(page, "CERTIFICADO", y, 28, fontBold, C.navy);

@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { formatDateBR, formatDateTimeBR } from "@/lib/utils";
 import { Container, Card, PageHeader, Alert, Badge } from "@/components/ui";
 import { InscricaoForm } from "./inscricao-form";
+import { PublicShell } from "@/components/public-shell";
 
 export default async function InscricaoPage({
   params,
@@ -22,8 +23,8 @@ export default async function InscricaoPage({
   const podeInscrever = !qrExpirado && !encerrada;
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
-      <Container className="py-12">
+    <PublicShell>
+      <Container className="py-10">
         <PageHeader
           title={palestra.titulo}
           description="Preencha seus dados para se inscrever"
@@ -31,7 +32,9 @@ export default async function InscricaoPage({
 
         <Card className="mb-6">
           <div className="flex flex-wrap gap-2 text-sm text-slate-600">
-            <span>{formatDateBR(palestra.data)} às {palestra.horario}</span>
+            <span>
+              {formatDateBR(palestra.data)} às {palestra.horario}
+            </span>
             {palestra.local && <span>· {palestra.local}</span>}
           </div>
           {palestra.descricao && (
@@ -63,6 +66,6 @@ export default async function InscricaoPage({
           </div>
         )}
       </Container>
-    </main>
+    </PublicShell>
   );
 }

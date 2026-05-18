@@ -1,8 +1,8 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { getSessionAdmin } from "@/lib/auth";
 import { logoutAction } from "@/lib/actions";
 import { Container, Button } from "@/components/ui";
+import { AbrarastroLogo } from "@/components/abrarastro-logo";
 
 export default async function AdminLayout({
   children,
@@ -11,28 +11,36 @@ export default async function AdminLayout({
 }) {
   const admin = await getSessionAdmin();
 
-  // Login page renders without nav
   if (!admin) {
     return <>{children}</>;
   }
 
   return (
-    <div className="min-h-screen bg-slate-100">
-      <nav className="border-b border-slate-200 bg-white">
-        <Container className="flex flex-wrap items-center justify-between gap-4 py-4">
-          <div className="flex items-center gap-6">
-            <Link href="/admin" className="font-bold text-slate-900">
-              Painel Admin
-            </Link>
-            <Link
-              href="/admin/palestras/nova"
-              className="text-sm text-slate-600 hover:text-blue-600"
-            >
-              Nova palestra
-            </Link>
+    <div className="flex min-h-screen flex-col bg-slate-100">
+      <nav className="border-b border-slate-200 bg-white shadow-sm">
+        <Container className="flex flex-wrap items-center justify-between gap-4 py-3">
+          <div className="flex flex-wrap items-center gap-6">
+            <AbrarastroLogo href="/admin" height={40} />
+            <div className="flex flex-wrap gap-4 text-sm font-medium">
+              <Link href="/admin" className="text-slate-600 hover:text-[#0f2744]">
+                Palestras
+              </Link>
+              <Link
+                href="/admin/palestras/nova"
+                className="text-slate-600 hover:text-[#0f2744]"
+              >
+                Nova palestra
+              </Link>
+              <Link
+                href="/admin/usuarios"
+                className="text-slate-600 hover:text-[#0f2744]"
+              >
+                Usuários
+              </Link>
+            </div>
           </div>
           <div className="flex items-center gap-4 text-sm">
-            <span className="text-slate-600">Olá, {admin.nome}</span>
+            <span className="text-slate-600">{admin.nome}</span>
             <form action={logoutAction}>
               <Button type="submit" variant="secondary">
                 Sair
@@ -41,7 +49,7 @@ export default async function AdminLayout({
           </div>
         </Container>
       </nav>
-      {children}
+      <div className="flex-1">{children}</div>
     </div>
   );
 }

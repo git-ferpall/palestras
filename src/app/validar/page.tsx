@@ -1,24 +1,19 @@
-import Link from "next/link";
-import { Container, Card, PageHeader, Button } from "@/components/ui";
+import { Container, Card, PageHeader } from "@/components/ui";
+import { PublicShell } from "@/components/public-shell";
 import { ValidarForm } from "./validar-form";
 
 export default function ValidarPage() {
   return (
-    <main className="min-h-screen bg-slate-50">
-      <Container className="py-12">
+    <PublicShell>
+      <Container className="py-10">
         <PageHeader
           title="Validar certificado"
-          description="Informe o código impresso no certificado"
+          description="Informe o código impresso no certificado ou escaneie o QR code"
         />
         <Card>
           <ValidarForm />
         </Card>
-        <p className="mt-6 text-center text-sm">
-          <Link href="/" className="text-blue-600 hover:underline">
-            Voltar ao início
-          </Link>
-        </p>
       </Container>
-    </main>
+    </PublicShell>
   );
 }

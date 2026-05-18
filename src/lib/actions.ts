@@ -8,6 +8,7 @@ import { prisma } from "./db";
 import {
   createSession,
   destroySession,
+  hashPassword,
   requireAdmin,
   verifyPassword,
 } from "./auth";
@@ -79,6 +80,50 @@ export async function loginAction(
 export async function logoutAction() {
   await destroySession();
   redirect("/admin/login");
+}
+
+const createAdminSchema = z.object({
+  nome: z.string().min(2, "Nome obrigatório"),
+  email: z.string().email("E-mail inválido"),
+  password: z.string().min(8, "Senha com no mínimo 8 caracteres"),
+});
+
+export async function createAdminAction(
+  _prev: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  try {
+    await requireAdmin();
+  } catch {
+    return { error: "Sessão expirada. Faça login novamente." };
+  }
+
+  const parsed = createAdminSchema.safeParse({
+    nome: formData.get("nome"),
+    email: formData.get("email"),
+    password: formData.get("password"),
+  });
+
+  if (!parsed.success) {
+    return { error: parsed.error.errors[0]?.message ?? "Dados inválidos" };
+  }
+
+  const email = parsed.data.email.trim().toLowerCase();
+  const exists = await prisma.admin.findUnique({ where: { email } });
+  if (exists) {
+    return { error: "Já existe um usuário com este e-mail" };
+  }
+
+  await prisma.admin.create({
+    data: {
+      nome: parsed.data.nome.trim(),
+      email,
+      password: await hashPassword(parsed.data.password),
+    },
+  });
+
+  revalidatePath("/admin/usuarios");
+  return { success: `Usuário ${parsed.data.nome} cadastrado com sucesso.` };
 }
 
 export async function createPalestraAction(

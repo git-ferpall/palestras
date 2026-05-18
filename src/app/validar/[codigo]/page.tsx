@@ -3,6 +3,7 @@ import { formatDateBR, formatCpf } from "@/lib/utils";
 import { formatValidacaoHashDisplay } from "@/lib/certificate-utils";
 import { findInscricaoByCodigoOuHash } from "@/lib/inscricao-utils";
 import { Container, Card, PageHeader, Alert, Badge } from "@/components/ui";
+import { PublicShell } from "@/components/public-shell";
 
 export default async function ValidarCodigoPage({
   params,
@@ -15,8 +16,8 @@ export default async function ValidarCodigoPage({
   const hash = inscricao?.validacaoHash ?? codigo;
 
   return (
-    <main className="min-h-screen bg-slate-50">
-      <Container className="py-12">
+    <PublicShell>
+      <Container className="py-10">
         <PageHeader title="Resultado da validação" />
 
         {valido ? (
@@ -25,7 +26,7 @@ export default async function ValidarCodigoPage({
               <Badge tone="success">Certificado autêntico</Badge>
             </div>
             <Alert type="success">
-              Este certificado é válido e foi emitido pelo sistema.
+              Este certificado é válido e foi emitido pela ABRARASTRO.
             </Alert>
             <dl className="mt-6 space-y-3 text-sm">
               <div>
@@ -63,11 +64,11 @@ export default async function ValidarCodigoPage({
         )}
 
         <p className="mt-6 text-center text-sm">
-          <Link href="/validar" className="text-blue-600 hover:underline">
+          <Link href="/validar" className="text-[#0d6e6e] hover:underline">
             Validar outro código
           </Link>
         </p>
       </Container>
-    </main>
+    </PublicShell>
   );
 }

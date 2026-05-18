@@ -1,0 +1,38 @@
+import fs from "fs";
+import { resolveLogoPath } from "@/lib/certificate-utils";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+const ALLOWED = new Set(["abrarastro", "frutag"]);
+
+function contentType(filePath: string) {
+  const lower = filePath.toLowerCase();
+  if (lower.endsWith(".png")) return "image/png";
+  if (lower.endsWith(".webp")) return "image/webp";
+  if (lower.endsWith(".jpg") || lower.endsWith(".jpeg")) return "image/jpeg";
+  return "application/octet-stream";
+}
+
+export async function GET(
+  _request: Request,
+  { params }: { params: Promise<{ name: string }> }
+) {
+  const { name } = await params;
+  if (!ALLOWED.has(name)) {
+    return new Response("Not found", { status: 404 });
+  }
+
+  const filePath = resolveLogoPath(name);
+  if (!filePath) {
+    return new Response("Logo not found", { status: 404 });
+  }
+
+  const body = fs.readFileSync(filePath);
+  return new Response(body, {
+    headers: {
+      "Content-Type": contentType(filePath),
+      "Cache-Control": "public, max-age=86400",
+    },
+  });
+}

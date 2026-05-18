@@ -12,6 +12,7 @@ import {
   Button,
   Alert,
 } from "@/components/ui";
+import { AbrarastroLogo } from "@/components/abrarastro-logo";
 
 const initial: ActionState = {};
 
@@ -19,12 +20,18 @@ export default function AdminLoginPage() {
   const [state, formAction, pending] = useActionState(loginAction, initial);
 
   return (
-    <main className="min-h-screen bg-slate-100">
-      <Container className="flex min-h-screen items-center justify-center py-12">
+    <main className="flex min-h-screen flex-col bg-slate-100">
+      <header className="border-b border-slate-200 bg-white px-4 py-4">
+        <Container className="flex justify-center">
+          <AbrarastroLogo href="/" height={48} showTagline />
+        </Container>
+      </header>
+
+      <Container className="flex flex-1 items-center justify-center py-12">
         <Card className="w-full max-w-md">
           <PageHeader
             title="Login do administrador"
-            description="Acesse o painel para gerenciar palestras"
+            description="Acesse o painel para gerenciar palestras e usuários"
           />
 
           {state.error && <Alert type="error">{state.error}</Alert>}
@@ -55,7 +62,7 @@ export default function AdminLoginPage() {
           </form>
 
           <p className="mt-6 text-center text-sm text-slate-500">
-            <Link href="/" className="text-blue-600 hover:underline">
+            <Link href="/" className="text-[#0d6e6e] hover:underline">
               Voltar ao início
             </Link>
           </p>

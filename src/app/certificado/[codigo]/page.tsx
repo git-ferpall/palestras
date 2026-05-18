@@ -6,6 +6,7 @@ import { formatValidacaoHashDisplay } from "@/lib/certificate-utils";
 import { ensureValidacaoHash } from "@/lib/inscricao-utils";
 import { Container, Card, PageHeader, Button, Alert } from "@/components/ui";
 import { DownloadCertificateButton } from "@/components/download-certificate-button";
+import { PublicShell } from "@/components/public-shell";
 
 export default async function CertificadoPage({
   params,
@@ -27,20 +28,20 @@ export default async function CertificadoPage({
 
   if (inscricao.palestra.status !== "ENCERRADA") {
     return (
-      <main className="min-h-screen bg-slate-50">
-        <Container className="py-12">
+      <PublicShell>
+        <Container className="py-10">
           <Alert type="warning">
             O certificado ficará disponível após o administrador encerrar a
             palestra.
           </Alert>
         </Container>
-      </main>
+      </PublicShell>
     );
   }
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-emerald-50 to-white">
-      <Container className="py-12">
+    <PublicShell>
+      <Container className="py-10">
         <PageHeader
           title="Seu certificado"
           description={inscricao.palestra.titulo}
@@ -86,6 +87,6 @@ export default async function CertificadoPage({
           </div>
         </Card>
       </Container>
-    </main>
+    </PublicShell>
   );
 }
