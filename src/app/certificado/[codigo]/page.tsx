@@ -5,6 +5,7 @@ import { formatDateBR, formatCpf } from "@/lib/utils";
 import { formatValidacaoHashDisplay } from "@/lib/certificate-utils";
 import { ensureValidacaoHash } from "@/lib/inscricao-utils";
 import { Container, Card, PageHeader, Button, Alert } from "@/components/ui";
+import { DownloadCertificateButton } from "@/components/download-certificate-button";
 
 export default async function CertificadoPage({
   params,
@@ -76,9 +77,7 @@ export default async function CertificadoPage({
           </dl>
 
           <div className="mt-8 flex flex-wrap gap-3">
-            <a href={`/api/certificado/${codigo}/pdf`} download>
-              <Button>Baixar PDF</Button>
-            </a>
+            <DownloadCertificateButton codigo={codigo} nome={inscricao.nome} />
             <Link href={`/validar/${validacaoHash}`}>
               <Button variant="secondary">Validar certificado</Button>
             </Link>

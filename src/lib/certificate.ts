@@ -50,14 +50,17 @@ function drawLogos(doc: PdfDoc, usarAbrarastro: boolean, usarFrutag: boolean) {
   const y = 42;
   const logoH = 48;
 
-  if (usarAbrarastro) {
-    const p = resolveLogoPath("abrarastro");
-    if (p) doc.image(p, 50, y, { height: logoH });
-  }
-
-  if (usarFrutag) {
-    const p = resolveLogoPath("frutag");
-    if (p) doc.image(p, doc.page.width - 150, y, { height: logoH });
+  try {
+    if (usarAbrarastro) {
+      const p = resolveLogoPath("abrarastro");
+      if (p) doc.image(p, 50, y, { height: logoH });
+    }
+    if (usarFrutag) {
+      const p = resolveLogoPath("frutag");
+      if (p) doc.image(p, doc.page.width - 150, y, { height: logoH });
+    }
+  } catch (e) {
+    console.warn("Logo não carregado:", e);
   }
 }
 
@@ -208,47 +211,53 @@ function drawBackPage(doc: PdfDoc, data: CertificateData) {
 export async function generateCertificatePdf(
   data: CertificateData
 ): Promise<Buffer> {
-  const doc = new PDFDocument({
-    size: "A4",
-    layout: "portrait",
-    margins: { top: 28, bottom: 28, left: 28, right: 28 },
-  });
-
-  const chunks: Buffer[] = [];
-  doc.on("data", (chunk) => chunks.push(chunk));
-
-  drawFrontPage(doc, data);
-  await drawValidationQr(doc, data.validacaoHash, doc.page.width - 118, 420);
-  drawBackPage(doc, data);
-  await drawValidationQr(
-    doc,
-    data.validacaoHash,
-    doc.page.width - 118,
-    doc.page.height - 130
-  );
-
-  doc.end();
-
   return new Promise((resolve, reject) => {
+    const doc = new PDFDocument({
+      size: "A4",
+      layout: "portrait",
+      margins: { top: 28, bottom: 28, left: 28, right: 28 },
+    });
+
+    const chunks: Buffer[] = [];
+    doc.on("data", (chunk) => chunks.push(chunk));
     doc.on("end", () => resolve(Buffer.concat(chunks)));
     doc.on("error", reject);
+
+    (async () => {
+      try {
+        drawFrontPage(doc, data);
+        await drawValidationQr(doc, data.validacaoHash, doc.page.width - 118, 420);
+        drawBackPage(doc, data);
+        await drawValidationQr(
+          doc,
+          data.validacaoHash,
+          doc.page.width - 118,
+          doc.page.height - 130
+        );
+        doc.end();
+      } catch (err) {
+        reject(err);
+      }
+    })();
   });
 }
 
+type PalestraCert = {
+  titulo: string;
+  subtituloCertificado?: string | null;
+  data: Date;
+  horario: string;
+  cargaHoraria: number;
+  local?: string | null;
+  cidadeUf?: string | null;
+  temas?: string | null;
+  usarLogoAbrarastro?: boolean;
+  usarLogoFrutag?: boolean;
+};
+
 export function buildCertificateData(
   inscricao: { nome: string; cpf: string },
-  palestra: {
-    titulo: string;
-    subtituloCertificado: string | null;
-    data: Date;
-    horario: string;
-    cargaHoraria: number;
-    local: string | null;
-    cidadeUf: string | null;
-    temas: string | null;
-    usarLogoAbrarastro: boolean;
-    usarLogoFrutag: boolean;
-  },
+  palestra: PalestraCert,
   validacaoHash: string,
   formatDateBR: (d: Date) => string,
   formatCpf: (c: string) => string
@@ -257,16 +266,16 @@ export function buildCertificateData(
     nome: inscricao.nome,
     cpf: formatCpf(inscricao.cpf),
     tituloPalestra: palestra.titulo,
-    subtituloCertificado: palestra.subtituloCertificado,
+    subtituloCertificado: palestra.subtituloCertificado ?? null,
     dataPalestra: formatDateBR(palestra.data),
     horario: palestra.horario,
     mesAno: formatMonthYearBR(palestra.data),
     cargaHoraria: palestra.cargaHoraria,
-    local: palestra.local,
-    cidadeUf: palestra.cidadeUf,
-    temas: parseTemasJson(palestra.temas),
-    usarLogoAbrarastro: palestra.usarLogoAbrarastro,
-    usarLogoFrutag: palestra.usarLogoFrutag,
+    local: palestra.local ?? null,
+    cidadeUf: palestra.cidadeUf ?? null,
+    temas: parseTemasJson(palestra.temas ?? null),
+    usarLogoAbrarastro: Boolean(palestra.usarLogoAbrarastro),
+    usarLogoFrutag: Boolean(palestra.usarLogoFrutag),
     validacaoHash,
   };
 }
