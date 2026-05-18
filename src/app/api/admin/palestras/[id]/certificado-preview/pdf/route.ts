@@ -51,7 +51,7 @@ export async function GET(
     )
   );
 
-  return new NextResponse(new Uint8Array(pdf), {
+  return new NextResponse(Buffer.from(pdf), {
     headers: {
       "Content-Type": "application/pdf",
       "Content-Disposition": 'inline; filename="preview-certificado.pdf"',

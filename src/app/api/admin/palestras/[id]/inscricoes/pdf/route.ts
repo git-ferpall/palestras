@@ -60,7 +60,7 @@ export async function GET(
 
   const filename = `inscritos-${safeFilename(palestra.titulo)}.pdf`;
 
-  return new NextResponse(pdf, {
+  return new NextResponse(Buffer.from(pdf), {
     headers: {
       "Content-Type": "application/pdf",
       "Content-Disposition": `attachment; filename="${filename}"`,
