@@ -135,53 +135,85 @@ export async function createPalestraAction(
   redirect("/admin");
 }
 
-export async function encerrarPalestraAction(palestraId: string) {
+export async function encerrarPalestraAction(
+  palestraId: string
+): Promise<ActionState> {
   try {
     await requireAdmin();
   } catch {
-    return { error: "Sessão expirada" };
+    return { error: "Sessão expirada. Faça login novamente." };
   }
 
-  const palestra = await prisma.palestra.findUnique({
-    where: { id: palestraId },
-    include: { inscricoes: true },
-  });
-
-  if (!palestra) return { error: "Palestra não encontrada" };
-  if (palestra.status === "ENCERRADA") {
-    return { error: "Palestra já encerrada" };
-  }
-
-  await prisma.palestra.update({
-    where: { id: palestraId },
-    data: { status: "ENCERRADA" },
-  });
-
-  let enviados = 0;
-  for (const inscricao of palestra.inscricoes) {
-    await sendCertificateEmail({
-      to: inscricao.email,
-      nome: inscricao.nome,
-      tituloPalestra: palestra.titulo,
-      certificadoCodigo: inscricao.certificadoCodigo,
+  try {
+    const palestra = await prisma.palestra.findUnique({
+      where: { id: palestraId },
+      include: { inscricoes: true },
     });
 
-    await prisma.inscricao.update({
-      where: { id: inscricao.id },
-      data: {
-        certificadoEnviado: true,
-        certificadoEnviadoEm: new Date(),
-      },
+    if (!palestra) return { error: "Palestra não encontrada" };
+    if (palestra.status === "ENCERRADA") {
+      return { error: "Palestra já encerrada" };
+    }
+
+    await prisma.palestra.update({
+      where: { id: palestraId },
+      data: { status: "ENCERRADA" },
     });
-    enviados++;
+
+    let enviados = 0;
+    let falhas = 0;
+
+    for (const inscricao of palestra.inscricoes) {
+      const emailResult = await sendCertificateEmail({
+        to: inscricao.email,
+        nome: inscricao.nome,
+        tituloPalestra: palestra.titulo,
+        certificadoCodigo: inscricao.certificadoCodigo,
+      });
+
+      if (emailResult.ok) {
+        await prisma.inscricao.update({
+          where: { id: inscricao.id },
+          data: {
+            certificadoEnviado: true,
+            certificadoEnviadoEm: new Date(),
+          },
+        });
+        enviados++;
+      } else {
+        falhas++;
+        console.error(
+          `Certificado não enviado para ${inscricao.email}: ${emailResult.error}`
+        );
+      }
+    }
+
+    revalidatePath("/admin");
+    revalidatePath(`/admin/palestras/${palestraId}`);
+
+    if (palestra.inscricoes.length === 0) {
+      return {
+        success:
+          "Palestra encerrada. Nenhum inscrito para receber certificado.",
+      };
+    }
+
+    if (falhas > 0) {
+      return {
+        success: `Palestra encerrada. ${enviados} e-mail(s) enviado(s), ${falhas} falha(s). Verifique SMTP no .env ou envie o link do certificado manualmente.`,
+      };
+    }
+
+    return {
+      success: `Palestra encerrada. ${enviados} e-mail(s) de certificado enviado(s).`,
+    };
+  } catch (err) {
+    console.error("encerrarPalestraAction:", err);
+    return {
+      error:
+        "Erro ao encerrar a palestra. Confira os logs do servidor (journalctl -u palestras).",
+    };
   }
-
-  revalidatePath("/admin");
-  revalidatePath(`/admin/palestras/${palestraId}`);
-
-  return {
-    success: `Palestra encerrada. ${enviados} e-mail(s) de certificado enviado(s).`,
-  };
 }
 
 export async function inscricaoAction(

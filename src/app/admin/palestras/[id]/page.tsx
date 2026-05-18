@@ -50,7 +50,17 @@ export default async function PalestraDetailPage({
         </Link>
       </div>
 
-      {msg && <Alert type="success">{decodeURIComponent(msg)}</Alert>}
+      {msg && (
+        <Alert type="success">
+          {(() => {
+            try {
+              return decodeURIComponent(msg);
+            } catch {
+              return msg;
+            }
+          })()}
+        </Alert>
+      )}
 
       <div className="mb-8 flex flex-wrap items-start justify-between gap-4">
         <PageHeader

@@ -22,16 +22,23 @@ export function EncerrarPalestraButton({ palestraId }: { palestraId: string }) {
           return;
         }
         startTransition(async () => {
-          const result = await encerrarPalestraAction(palestraId);
-          if (result.error) {
-            alert(result.error);
-            return;
-          }
-          router.refresh();
-          if (result.success) {
-            router.push(
-              `/admin/palestras/${palestraId}?msg=${encodeURIComponent(result.success)}`
+          try {
+            const result = await encerrarPalestraAction(palestraId);
+            if (result?.error) {
+              alert(result.error);
+              return;
+            }
+            router.refresh();
+            if (result?.success) {
+              router.push(
+                `/admin/palestras/${palestraId}?msg=${encodeURIComponent(result.success)}`
+              );
+            }
+          } catch {
+            alert(
+              "Erro inesperado ao encerrar. A palestra pode já ter sido encerrada — atualize a página."
             );
+            router.refresh();
           }
         });
       }}

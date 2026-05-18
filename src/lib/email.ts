@@ -18,12 +18,16 @@ function getTransporter() {
   });
 }
 
+export type SendEmailResult =
+  | { ok: true; simulated: boolean }
+  | { ok: false; error: string };
+
 export async function sendCertificateEmail(params: {
   to: string;
   nome: string;
   tituloPalestra: string;
   certificadoCodigo: string;
-}) {
+}): Promise<SendEmailResult> {
   const appUrl = getAppUrl();
   const downloadUrl = `${appUrl}/certificado/${params.certificadoCodigo}`;
   const validarUrl = `${appUrl}/validar/${params.certificadoCodigo}`;
@@ -57,16 +61,21 @@ export async function sendCertificateEmail(params: {
     console.log(`Para: ${params.to}`);
     console.log(text);
     console.log("---------------------------------------------\n");
-    return { simulated: true };
+    return { ok: true, simulated: true };
   }
 
-  await transporter.sendMail({
-    from: process.env.SMTP_FROM ?? process.env.SMTP_USER,
-    to: params.to,
-    subject: `Certificado — ${params.tituloPalestra}`,
-    text,
-    html,
-  });
-
-  return { simulated: false };
+  try {
+    await transporter.sendMail({
+      from: process.env.SMTP_FROM ?? process.env.SMTP_USER,
+      to: params.to,
+      subject: `Certificado — ${params.tituloPalestra}`,
+      text,
+      html,
+    });
+    return { ok: true, simulated: false };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Falha ao enviar e-mail";
+    console.error(`Erro SMTP para ${params.to}:`, err);
+    return { ok: false, error: message };
+  }
 }
