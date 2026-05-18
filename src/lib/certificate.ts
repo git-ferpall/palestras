@@ -236,6 +236,7 @@ async function drawLogosInBand(
   page: PDFPage,
   pdfDoc: PDFDocument,
   usarFrutag: boolean,
+  font: PDFFont,
   fontBold: PDFFont
 ) {
   const { width, height } = page.getSize();
@@ -529,7 +530,7 @@ async function drawFrontPage(
 
   drawProfessionalFrame(page);
   drawHeaderBand(page);
-  await drawLogosInBand(page, pdfDoc, data.usarLogoFrutag, fontBold);
+  await drawLogosInBand(page, pdfDoc, data.usarLogoFrutag, font, fontBold);
 
   let y = 108;
   drawCentered(page, "CERTIFICADO", y, 28, fontBold, C.navy);
