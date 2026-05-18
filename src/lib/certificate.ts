@@ -1,6 +1,15 @@
+import fs from "fs";
+import path from "path";
 import PDFDocument from "pdfkit";
 import QRCode from "qrcode";
 import { getAppUrl } from "./utils";
+
+function initPdfKit() {
+  const dataDir = path.join(process.cwd(), "node_modules/pdfkit/js/data");
+  if (fs.existsSync(dataDir)) {
+    process.env.PDFKIT_FONT_PATH = dataDir;
+  }
+}
 import {
   formatValidacaoHashDisplay,
   resolveLogoPath,
@@ -211,6 +220,8 @@ function drawBackPage(doc: PdfDoc, data: CertificateData) {
 export async function generateCertificatePdf(
   data: CertificateData
 ): Promise<Buffer> {
+  initPdfKit();
+
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument({
       size: "A4",
