@@ -5,7 +5,10 @@ import {
   buildCertificateData,
 } from "@/lib/certificate";
 import { formatCpf, formatDateBR } from "@/lib/utils";
-import { ensureValidacaoHash } from "@/lib/inscricao-utils";
+import {
+  ensureValidacaoHash,
+  findInscricaoByCodigoOuHash,
+} from "@/lib/inscricao-utils";
 import { generateValidacaoHash } from "@/lib/certificate-utils";
 
 export const runtime = "nodejs";
@@ -18,13 +21,16 @@ export async function GET(
   try {
     const { codigo } = await params;
 
-    const inscricao = await prisma.inscricao.findUnique({
-      where: { certificadoCodigo: codigo },
-      include: { palestra: true },
-    });
+    const inscricao = await findInscricaoByCodigoOuHash(codigo);
 
     if (!inscricao) {
-      return NextResponse.json({ error: "Inscrição não encontrada" }, { status: 404 });
+      return NextResponse.json(
+        {
+          error:
+            "Código não encontrado. Use o link do e-mail ou o código longo do certificado.",
+        },
+        { status: 404 }
+      );
     }
 
     if (inscricao.palestra.status !== "ENCERRADA") {

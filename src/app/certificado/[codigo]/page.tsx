@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { prisma } from "@/lib/db";
 import { formatDateBR, formatCpf } from "@/lib/utils";
+import { findInscricaoByCodigoOuHash } from "@/lib/inscricao-utils";
 import { formatValidacaoHashDisplay } from "@/lib/certificate-utils";
 import { ensureValidacaoHash } from "@/lib/inscricao-utils";
 import { Container, Card, PageHeader, Button, Alert } from "@/components/ui";
@@ -14,12 +14,11 @@ export default async function CertificadoPage({
 }) {
   const { codigo } = await params;
 
-  const inscricao = await prisma.inscricao.findUnique({
-    where: { certificadoCodigo: codigo },
-    include: { palestra: true },
-  });
+  const inscricao = await findInscricaoByCodigoOuHash(codigo);
 
   if (!inscricao) notFound();
+
+  const certificadoCodigo = inscricao.certificadoCodigo;
 
   const validacaoHash = await ensureValidacaoHash(
     inscricao.id,
@@ -77,7 +76,10 @@ export default async function CertificadoPage({
           </dl>
 
           <div className="mt-8 flex flex-wrap gap-3">
-            <DownloadCertificateButton codigo={codigo} nome={inscricao.nome} />
+            <DownloadCertificateButton
+              codigo={certificadoCodigo}
+              nome={inscricao.nome}
+            />
             <Link href={`/validar/${validacaoHash}`}>
               <Button variant="secondary">Validar certificado</Button>
             </Link>
