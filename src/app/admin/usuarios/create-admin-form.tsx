@@ -14,28 +14,32 @@ export function CreateAdminForm() {
       {state.error && <Alert type="error">{state.error}</Alert>}
       {state.success && <Alert type="success">{state.success}</Alert>}
 
-      <div>
+      <p className="space-y-1">
         <Label>Nome completo *</Label>
         <Input name="nome" required placeholder="Nome do administrador" />
-      </div>
-      <div>
+      </p>
+      <p className="space-y-1">
         <Label>E-mail *</Label>
-        <Input name="email" type="email" required placeholder="email@exemplo.com" />
-      </div>
-      <div>
+        <Input
+          name="email"
+          type="email"
+          required
+          placeholder="email@exemplo.com"
+        />
+      </p>
+      <p className="space-y-1">
         <Label>Senha *</Label>
         <Input
           name="password"
           type="password"
           required
           minLength={8}
-          placeholder="M?nimo 8 caracteres"
+          placeholder="Minimo 8 caracteres"
         />
-      </div>
+      </p>
       <Button type="submit" disabled={pending} className="w-full">
-        {pending ? "Cadastrando..." : "Cadastrar usuário"}
+        {pending ? "Cadastrando..." : "Cadastrar usuario"}
       </Button>
     </form>
   );
 }
-
