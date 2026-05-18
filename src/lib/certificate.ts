@@ -1,14 +1,20 @@
 import fs from "fs";
 import path from "path";
 import { createRequire } from "module";
-import type PDFDocumentType from "pdfkit";
 import QRCode from "qrcode";
 import { getAppUrl } from "./utils";
+import {
+  formatValidacaoHashDisplay,
+  resolveLogoPath,
+  parseTemasJson,
+  formatMonthYearBR,
+} from "./certificate-utils";
+
+type PdfKitCtor = typeof import("pdfkit");
+type PdfDoc = InstanceType<PdfKitCtor>;
 
 /** Carrega pdfkit do node_modules (evita bundle que quebra caminho das fontes .afm) */
-function createPdfDocument(
-  options: ConstructorParameters<typeof PDFDocumentType>[0]
-) {
+function createPdfDocument(options?: ConstructorParameters<PdfKitCtor>[0]): PdfDoc {
   const dataDir = path.join(process.cwd(), "node_modules/pdfkit/js/data");
   if (!fs.existsSync(path.join(dataDir, "Helvetica.afm"))) {
     throw new Error(
@@ -18,15 +24,9 @@ function createPdfDocument(
   process.env.PDFKIT_FONT_PATH = dataDir;
 
   const requirePdf = createRequire(path.join(process.cwd(), "package.json"));
-  const PDFDocument = requirePdf("pdfkit") as typeof PDFDocumentType;
+  const PDFDocument = requirePdf("pdfkit") as PdfKitCtor;
   return new PDFDocument(options);
 }
-import {
-  formatValidacaoHashDisplay,
-  resolveLogoPath,
-  parseTemasJson,
-  formatMonthYearBR,
-} from "./certificate-utils";
 
 export type CertificateData = {
   nome: string;
@@ -51,8 +51,6 @@ const COLORS = {
   slate: "#334155",
   muted: "#64748b",
 };
-
-type PdfDoc = PDFDocumentType;
 
 function drawBorder(doc: PdfDoc) {
   const m = 28;
