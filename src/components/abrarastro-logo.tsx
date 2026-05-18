@@ -18,20 +18,23 @@ export function AbrarastroLogo({
   showTagline = false,
   variant = "default",
 }: AbrarastroLogoProps) {
-  const [src, setSrc] = useState("/logos/abrarastro.png");
+  const [imgFailed, setImgFailed] = useState(false);
 
-  const img = (
+  const img = imgFailed ? (
+    <span
+      className="font-bold tracking-wide text-[#0f2744]"
+      style={{ fontSize: height * 0.45, lineHeight: 1 }}
+    >
+      ABRARASTRO
+    </span>
+  ) : (
     <img
-      src={src}
+      src="/logos/abrarastro.png"
       alt="ABRARASTRO"
       height={height}
       className={`object-contain object-left ${className}`}
       style={{ height, width: "auto", maxWidth: height * 3.2 }}
-      onError={() => {
-        if (src !== "/api/logo/abrarastro") {
-          setSrc("/api/logo/abrarastro");
-        }
-      }}
+      onError={() => setImgFailed(true)}
     />
   );
 

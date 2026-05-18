@@ -1,4 +1,6 @@
 import fs from "fs";
+import path from "path";
+import { NextResponse } from "next/server";
 import { resolveLogoPath } from "@/lib/certificate-utils";
 
 export const runtime = "nodejs";
@@ -14,22 +16,30 @@ function contentType(filePath: string) {
   return "application/octet-stream";
 }
 
+function resolvePublicLogo(name: string): string | null {
+  const file =
+    name === "abrarastro" ? "abrarastro.png" : name === "frutag" ? "frutag.png" : null;
+  if (!file) return null;
+  const p = path.join(process.cwd(), "public", "logos", file);
+  return fs.existsSync(p) ? p : null;
+}
+
 export async function GET(
   _request: Request,
   { params }: { params: Promise<{ name: string }> }
 ) {
   const { name } = await params;
   if (!ALLOWED.has(name)) {
-    return new Response("Not found", { status: 404 });
+    return new NextResponse("Not found", { status: 404 });
   }
 
-  const filePath = resolveLogoPath(name);
+  const filePath = resolvePublicLogo(name) ?? resolveLogoPath(name);
   if (!filePath) {
-    return new Response("Logo not found", { status: 404 });
+    return new NextResponse("Logo not found", { status: 404 });
   }
 
   const body = fs.readFileSync(filePath);
-  return new Response(body, {
+  return new NextResponse(body, {
     headers: {
       "Content-Type": contentType(filePath),
       "Cache-Control": "public, max-age=86400",
