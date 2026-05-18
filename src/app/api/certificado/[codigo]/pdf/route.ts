@@ -1,9 +1,5 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import {
-  generateCertificatePdf,
-  buildCertificateData,
-} from "@/lib/certificate";
 import { formatCpf, formatDateBR } from "@/lib/utils";
 import {
   ensureValidacaoHash,
@@ -49,6 +45,10 @@ export async function GET(
     if (!validacaoHash) {
       validacaoHash = generateValidacaoHash();
     }
+
+    const { generateCertificatePdf, buildCertificateData } = await import(
+      "@/lib/certificate"
+    );
 
     const pdf = await generateCertificatePdf(
       buildCertificateData(
