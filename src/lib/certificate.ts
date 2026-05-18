@@ -14,6 +14,8 @@ import {
   resolveLogoPath,
   parseTemasJson,
   formatMonthYearBR,
+  TEXTO_DECLARACAO_CERTIFICADO_PADRAO,
+  applyDeclaracaoPlaceholders,
 } from "./certificate-utils";
 
 export type CertificateData = {
@@ -400,19 +402,10 @@ function drawMetaCard(
 }
 
 function formatDeclaracaoParticipacao(data: CertificateData): string {
-  const padrao = `participou com aproveitamento do treinamento "${data.tituloPalestra}", realizado em ${data.mesAno}, na data de ${data.dataPalestra}, com carga horária total de ${data.cargaHoraria} hora(s).`;
-  const custom = data.textoDeclaracaoCertificado?.trim();
-  if (!custom) return padrao;
-
-  return custom
-    .replace(/\{nome\}/gi, data.nome)
-    .replace(/\{cpf\}/gi, data.cpf)
-    .replace(/\{titulo\}/gi, data.tituloPalestra)
-    .replace(/\{data\}/gi, data.dataPalestra)
-    .replace(/\{mesAno\}/gi, data.mesAno)
-    .replace(/\{horario\}/gi, data.horario)
-    .replace(/\{cargaHoraria\}/gi, String(data.cargaHoraria))
-    .replace(/\{carga\}/gi, String(data.cargaHoraria));
+  const template =
+    data.textoDeclaracaoCertificado?.trim() ||
+    TEXTO_DECLARACAO_CERTIFICADO_PADRAO;
+  return applyDeclaracaoPlaceholders(template, data);
 }
 
 function drawFooter(
