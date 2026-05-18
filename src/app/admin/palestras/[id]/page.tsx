@@ -16,6 +16,8 @@ import {
 } from "@/components/ui";
 import { EncerrarPalestraButton } from "./encerrar-button";
 import { ExcluirPalestraButton } from "./excluir-button";
+import { DownloadQrButton } from "./download-qr-button";
+import { PreviewCertificadoButton } from "./preview-certificado-button";
 
 export default async function PalestraDetailPage({
   params,
@@ -120,6 +122,14 @@ export default async function PalestraDetailPage({
             </div>
           </dl>
 
+          <div className="mt-6 border-t border-slate-100 pt-4">
+            <p className="mb-3 text-sm font-medium text-slate-700">Certificado</p>
+            <PreviewCertificadoButton palestraId={palestra.id} />
+            <p className="mt-2 text-xs text-slate-500">
+              Previa com dados de exemplo ou do primeiro inscrito cadastrado.
+            </p>
+          </div>
+
           {parseTemasJson(palestra.temas).length > 0 && (
             <div className="mt-4 border-t border-slate-100 pt-4">
               <p className="mb-2 text-sm font-medium text-slate-700">Temas (verso)</p>
@@ -133,7 +143,11 @@ export default async function PalestraDetailPage({
 
           {palestra.status === "AGENDADA" && (
             <div className="mt-6 border-t border-slate-100 pt-6">
-              <EncerrarPalestraButton palestraId={palestra.id} />
+              <EncerrarPalestraButton
+                palestraId={palestra.id}
+                titulo={palestra.titulo}
+                totalInscritos={palestra.inscricoes.length}
+              />
               <p className="mt-2 text-xs text-slate-500">
                 Ao encerrar, todos os inscritos recebem e-mail com link do certificado.
               </p>
@@ -152,6 +166,9 @@ export default async function PalestraDetailPage({
             unoptimized
           />
           <p className="mt-4 break-all text-xs text-slate-500">{inscricaoUrl}</p>
+          <div className="mt-4 flex justify-center">
+            <DownloadQrButton dataUrl={qrDataUrl} titulo={palestra.titulo} />
+          </div>
           {!qrAtivo && (
             <p className="mt-2 text-sm text-amber-700">
               Este QR code não aceita mais inscrições.

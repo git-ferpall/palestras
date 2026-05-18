@@ -11,6 +11,7 @@ import {
   Alert,
 } from "@/components/ui";
 import { formatDateBR, formatDateTimeBR } from "@/lib/utils";
+import { InscritosModalButton } from "./inscritos-modal-button";
 
 export default async function AdminDashboardPage({
   searchParams,
@@ -86,9 +87,16 @@ export default async function AdminDashboardPage({
                     {formatDateTimeBR(p.qrExpiraEm)}
                   </p>
                 </div>
-                <Link href={`/admin/palestras/${p.id}`}>
-                  <Button variant="secondary">Detalhes</Button>
-                </Link>
+                <div className="flex flex-wrap gap-2">
+                  <InscritosModalButton
+                    palestraId={p.id}
+                    titulo={p.titulo}
+                    totalInscritos={p._count.inscricoes}
+                  />
+                  <Link href={`/admin/palestras/${p.id}`}>
+                    <Button variant="secondary">Detalhes</Button>
+                  </Link>
+                </div>
               </Card>
             );
           })}
