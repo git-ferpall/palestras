@@ -27,7 +27,10 @@ model Palestra {
   horario              String
   cargaHoraria         Int         @default(2)
   temas                String?
-  usarLogoAbrarastro   Boolean     @default(false)
+  logoEventoPath       String?
+  ministranteNome      String?
+  ministranteAssinaturaPath String?
+  usarLogoAbrarastro   Boolean     @default(true)
   usarLogoFrutag       Boolean     @default(false)
   qrToken              String      @unique
   qrExpiraEm           DateTime

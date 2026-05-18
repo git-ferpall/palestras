@@ -110,15 +110,16 @@ export default async function PalestraDetailPage({
               <dd>{palestra.inscricoes.length}</dd>
             </div>
             <div className="flex justify-between gap-4">
-              <dt className="text-slate-500">Logos</dt>
-              <dd>
-                {[
-                  palestra.usarLogoAbrarastro && "Abrarastro",
-                  palestra.usarLogoFrutag && "Frutag",
-                ]
-                  .filter(Boolean)
-                  .join(", ") || "Nenhuma"}
-              </dd>
+              <dt className="text-slate-500">Logo evento</dt>
+              <dd>{palestra.logoEventoPath ? "Personalizado" : "—"}</dd>
+            </div>
+            <div className="flex justify-between gap-4">
+              <dt className="text-slate-500">Ministrante</dt>
+              <dd>{palestra.ministranteNome || "—"}</dd>
+            </div>
+            <div className="flex justify-between gap-4">
+              <dt className="text-slate-500">Assinatura</dt>
+              <dd>{palestra.ministranteAssinaturaPath ? "Cadastrada" : "—"}</dd>
             </div>
           </dl>
 

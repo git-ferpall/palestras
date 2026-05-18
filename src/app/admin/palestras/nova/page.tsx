@@ -2,7 +2,7 @@
 
 import { useActionState } from "react";
 import { createPalestraAction, type ActionState } from "@/lib/actions";
-import { TEXTO_DECLARACAO_CERTIFICADO_PADRAO } from "@/lib/certificate-utils";
+import { SignaturePad } from "@/components/signature-pad";
 import {
   Container,
   Card,
@@ -12,7 +12,6 @@ import {
   Textarea,
   Button,
   Alert,
-  Checkbox,
 } from "@/components/ui";
 
 const initial: ActionState = {};
@@ -35,7 +34,7 @@ export default function NovaPalestraPage() {
     <Container>
       <PageHeader
         title="Nova palestra"
-        description="Certificado em 2 páginas com temas, logos e QR de validação"
+        description="Certificado em 2 páginas — frente simplificada, verso com atividades"
       />
 
       {state.error && (
@@ -45,33 +44,20 @@ export default function NovaPalestraPage() {
       )}
 
       <Card>
-        <form action={formAction} className="grid gap-4 sm:grid-cols-2">
+        <form
+          action={formAction}
+          encType="multipart/form-data"
+          className="grid gap-4 sm:grid-cols-2"
+        >
           <div className="sm:col-span-2">
-            <Label>Título do treinamento *</Label>
+            <Label>Título da palestra (no certificado) *</Label>
             <Input
               name="titulo"
               required
-              placeholder="Ex: Treinamento em Rastreabilidade de Alimentos no Varejo"
-            />
-          </div>
-          <div className="sm:col-span-2">
-            <Label>Subtítulo no certificado</Label>
-            <Input
-              name="subtituloCertificado"
-              placeholder="Ex: Treinamento em Rastreabilidade de Alimentos no Varejo"
-            />
-          </div>
-          <div className="sm:col-span-2">
-            <Label>Texto de participação no certificado</Label>
-            <Textarea
-              name="textoDeclaracaoCertificado"
-              rows={4}
-              defaultValue={TEXTO_DECLARACAO_CERTIFICADO_PADRAO}
+              placeholder="Ex: Rastreabilidade na Aquicultura Rumo à Sustentabilidade"
             />
             <p className="mt-1 text-xs text-slate-500">
-              Parágrafo após o nome — edite o texto abaixo para complementar ou
-              ajustar. Variáveis: {"{nome}"}, {"{titulo}"}, {"{data}"},{" "}
-              {"{mesAno}"}, {"{horario}"}, {"{cargaHoraria}"}.
+              Aparece em maiúsculas na frente do certificado, com a carga horária.
             </p>
           </div>
           <div className="sm:col-span-2">
@@ -104,9 +90,6 @@ export default function NovaPalestraPage() {
               defaultValue={1}
               required
             />
-            <p className="mt-1 text-xs text-slate-500">
-              Exibida apenas na capa do certificado (não por tema).
-            </p>
           </div>
           <div>
             <Label>QR code válido até *</Label>
@@ -120,19 +103,30 @@ export default function NovaPalestraPage() {
 
           <div className="sm:col-span-2 rounded-lg border border-slate-200 bg-slate-50 p-4">
             <p className="mb-3 text-sm font-medium text-slate-800">
-              Logos no certificado
+              Logo do evento (canto superior direito)
             </p>
             <p className="mb-3 text-xs text-slate-500">
-              Logo Abrarastro sempre no certificado. Arquivos em public/logos/ ou
-              src/logos/ (abrarastro.png e, se quiser, frutag.png).
+              Substitui o logo Frutag. A logo Abrarastro permanece à esquerda e
+              como marca d&apos;água no centro do certificado.
             </p>
-            <div className="flex flex-wrap gap-6">
-              <Checkbox
-                name="usarLogoFrutag"
-                label="Incluir logo e apoio técnico Frutag"
-                defaultChecked
+            <input
+              type="file"
+              name="logoEvento"
+              accept="image/png,image/jpeg,image/webp"
+              className="block w-full text-sm text-slate-600 file:mr-4 file:rounded-lg file:border-0 file:bg-white file:px-4 file:py-2 file:text-sm file:font-medium file:text-slate-800 hover:file:bg-slate-100"
+            />
+          </div>
+
+          <div className="sm:col-span-2 rounded-lg border border-slate-200 bg-slate-50 p-4">
+            <p className="mb-3 text-sm font-medium text-slate-800">Ministrante</p>
+            <div className="mb-4">
+              <Label>Nome do ministrante</Label>
+              <Input
+                name="ministranteNome"
+                placeholder="Ex: Dr. João Silva"
               />
             </div>
+            <SignaturePad />
           </div>
 
           <div className="sm:col-span-2">
@@ -145,7 +139,7 @@ export default function NovaPalestraPage() {
               }
             />
             <p className="mt-1 text-xs text-slate-500">
-              Listados no verso sem carga horária por tema.
+              Listados no verso na tabela de atividades.
             </p>
           </div>
 

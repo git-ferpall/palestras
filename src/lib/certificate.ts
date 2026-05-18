@@ -13,26 +13,29 @@ import {
   formatValidacaoHashDisplay,
   resolveLogoPath,
   parseTemasJson,
-  formatMonthYearBR,
-  TEXTO_DECLARACAO_CERTIFICADO_PADRAO,
-  applyDeclaracaoPlaceholders,
 } from "./certificate-utils";
+import {
+  drawClassicCertificateFrame,
+  drawAbrarastroWatermark,
+  drawSignatureLine,
+  drawSignatureWithImage,
+  embedBrandLogo,
+  embedPalestraAsset,
+  CertColors,
+  formatCargaHorasCertificado,
+} from "./certificate-layout";
 
 export type CertificateData = {
   nome: string;
   cpf: string;
   tituloPalestra: string;
-  subtituloCertificado?: string | null;
-  textoDeclaracaoCertificado?: string | null;
   dataPalestra: string;
   horario: string;
-  mesAno: string;
   cargaHoraria: number;
-  local?: string | null;
-  cidadeUf?: string | null;
   temas: string[];
-  usarLogoAbrarastro: boolean;
-  usarLogoFrutag: boolean;
+  logoEventoPath?: string | null;
+  ministranteNome?: string | null;
+  ministranteAssinaturaPath?: string | null;
   validacaoHash: string;
 };
 
@@ -401,51 +404,6 @@ function drawMetaCard(
   }
 }
 
-function formatDeclaracaoParticipacao(data: CertificateData): string {
-  const template =
-    data.textoDeclaracaoCertificado?.trim() ||
-    TEXTO_DECLARACAO_CERTIFICADO_PADRAO;
-  return applyDeclaracaoPlaceholders(template, data);
-}
-
-function drawFooter(
-  page: PDFPage,
-  data: CertificateData,
-  font: PDFFont,
-  fontBold: PDFFont
-) {
-  const { width } = page.getSize();
-  const base = L.bottom;
-  const blockW = 268;
-  const contentRight = width - L.right - L.qrReserve;
-
-  const leftCenter = L.left + blockW / 2;
-  drawFooterBlock(
-    page,
-    leftCenter,
-    blockW,
-    base,
-    "ABRARASTRO",
-    "Associação Brasileira de Rastreabilidade de Alimentos",
-    font,
-    fontBold
-  );
-
-  if (data.usarLogoFrutag) {
-    const rightCenter = contentRight - blockW / 2;
-    drawFooterBlock(
-      page,
-      rightCenter,
-      blockW,
-      base,
-      "FRUTAG",
-      "Apoio técnico",
-      font,
-      fontBold
-    );
-  }
-}
-
 async function drawValidationBlock(
   page: PDFPage,
   pdfDoc: PDFDocument,
@@ -520,103 +478,124 @@ async function drawFrontPage(
   font: PDFFont,
   fontBold: PDFFont
 ) {
-  const { width } = page.getSize();
-  const contentW = width - L.left - L.right - L.qrReserve;
+  const { width, height } = page.getSize();
+  const contentW = width - L.left - L.right - 40;
 
-  drawProfessionalFrame(page);
-  drawHeaderBand(page);
-  await drawLogosInBand(page, pdfDoc, data.usarLogoFrutag, fontBold);
+  drawClassicCertificateFrame(page);
+  await drawAbrarastroWatermark(page, pdfDoc);
 
-  let y = 108;
-  drawCentered(page, "CERTIFICADO", y, 28, fontBold, C.navy);
-  y += 32;
-  drawCentered(page, "DE PARTICIPAÇÃO", y, 14, fontBold, C.teal);
-  y += 22;
-  drawOrnamentLine(page, y);
-  y += 16;
-
-  if (data.subtituloCertificado) {
-    drawCentered(page, data.subtituloCertificado.toUpperCase(), y, 10, font, C.gold);
-    y += 18;
+  const logoH = 52;
+  const logoY = yTop(height, 36, logoH);
+  const abra = await embedBrandLogo(pdfDoc, "abrarastro");
+  if (abra) {
+    const scale = logoH / abra.height;
+    const w = abra.width * scale;
+    page.drawImage(abra, { x: L.left + 8, y: logoY, width: w, height: logoH });
   }
 
+  const eventLogo = await embedPalestraAsset(pdfDoc, data.logoEventoPath);
+  if (eventLogo) {
+    const maxW = 120;
+    const scale = Math.min(logoH / eventLogo.height, maxW / eventLogo.width);
+    const w = eventLogo.width * scale;
+    const h = eventLogo.height * scale;
+    page.drawImage(eventLogo, {
+      x: width - L.right - w - 8,
+      y: logoY + (logoH - h) / 2,
+      width: w,
+      height: h,
+    });
+  }
+
+  let y = 118;
+  drawCentered(page, "CERTIFICADO DE CONCLUSÃO", y, 16, fontBold, CertColors.greenDark);
+  y += 36;
+
+  drawCentered(page, data.nome, y, 26, fontBold, CertColors.text);
+  y += 38;
+
+  drawCentered(page, "Participou da Palestra", y, 12, font, CertColors.muted);
+  y += 22;
+
+  const tituloLinha = `${data.tituloPalestra.toUpperCase()} ${formatCargaHorasCertificado(data.cargaHoraria)}`;
   y = drawWrappedCentered(
     page,
-    "A Associação Brasileira de Rastreabilidade de Alimentos (ABRARASTRO) certifica que",
+    tituloLinha,
     y,
-    10,
-    font,
-    C.muted,
-    contentW
+    11,
+    fontBold,
+    CertColors.greenDark,
+    contentW,
+    5
   );
-  y += 8;
+  y += 14;
 
-  drawCentered(page, data.nome.toUpperCase(), y, 22, fontBold, C.navy);
-  y += 30;
-  drawCentered(page, `CPF: ${data.cpf}`, y, 9, font, C.faint);
-  y += 20;
+  drawCentered(page, data.dataPalestra, y, 12, font, CertColors.text);
 
-  y = drawWrappedCentered(
+  const sigBase = L.bottom + 8;
+  const sigW = 220;
+  const leftCx = L.left + 28 + sigW / 2;
+  const rightCx = width - L.right - 28 - sigW / 2;
+
+  drawSignatureLine(
     page,
-    formatDeclaracaoParticipacao(data),
-    y,
-    10,
-    font,
-    C.slate,
-    contentW + 40
-  );
-  y += 12;
-
-  const cardsTotalW = width - L.left - L.right - L.qrReserve;
-  const cardGap = 14;
-  const cardW = (cardsTotalW - cardGap * 2) / 3;
-  const cardX0 = L.left;
-  const cidade = data.cidadeUf || data.local || "—";
-  drawMetaCard(page, cardX0, y, cardW, "Local", cidade, font, fontBold);
-  drawMetaCard(
-    page,
-    cardX0 + cardW + cardGap,
-    y,
-    cardW,
-    "Data",
-    data.dataPalestra,
+    leftCx,
+    sigW,
+    sigBase,
+    "DIRETORIA ABRARASTRO",
     font,
     fontBold
   );
-  drawMetaCard(
+
+  const ministranteLabel = data.ministranteNome?.trim() || "Ministrante";
+  await drawSignatureWithImage(
     page,
-    cardX0 + (cardW + cardGap) * 2,
-    y,
-    cardW,
-    "Carga horária",
-    `${data.cargaHoraria} hora(s)`,
+    pdfDoc,
+    rightCx,
+    sigW,
+    sigBase,
+    ministranteLabel,
+    data.ministranteAssinaturaPath,
     font,
     fontBold
   );
-
-  drawFooter(page, data, font, fontBold);
-  await drawValidationBlock(page, pdfDoc, data.validacaoHash, font, fontBold);
 }
 
-function drawBackPage(
+async function drawBackPage(
   page: PDFPage,
+  pdfDoc: PDFDocument,
   data: CertificateData,
   font: PDFFont,
   fontBold: PDFFont
 ) {
   const { width, height } = page.getSize();
-  drawProfessionalFrame(page);
+  drawClassicCertificateFrame(page);
+  await drawAbrarastroWatermark(page, pdfDoc);
 
   let y = 48;
-  drawCentered(page, "CONTEÚDO PROGRAMÁTICO", y, 18, fontBold, C.navy);
-  y += 24;
-  drawOrnamentLine(page, y);
+  const tableLeft = L.left + 8;
+  page.drawText("Atividades ministradas:", {
+    x: tableLeft,
+    y: yTop(height, y, 12),
+    size: 12,
+    font: fontBold,
+    color: CertColors.greenDark,
+  });
+  y += 18;
+  const temaLines = wrapLines(data.tituloPalestra, font, 10, width - tableLeft - L.right - 20);
+  for (const ln of temaLines.slice(0, 2)) {
+    page.drawText(ln, {
+      x: tableLeft,
+      y: yTop(height, y, 10),
+      size: 10,
+      font,
+      color: CertColors.muted,
+    });
+    y += 14;
+  }
   y += 12;
-  drawCentered(page, data.tituloPalestra, y, 10, font, C.teal);
-  y += 20;
 
-  const tableLeft = L.left;
-  const tableW = width - L.left - L.right;
+  const tableW = width - tableLeft - L.right;
   const colNumW = 44;
   const temaX = tableLeft + colNumW;
   const temaW = tableW - colNumW;
@@ -734,7 +713,7 @@ export async function generateCertificatePdf(
   await drawFrontPage(page1, pdfDoc, data, font, fontBold);
 
   const page2 = pdfDoc.addPage(A4_LANDSCAPE);
-  drawBackPage(page2, data, font, fontBold);
+  await drawBackPage(page2, pdfDoc, data, font, fontBold);
   await drawValidationBlock(page2, pdfDoc, data.validacaoHash, font, fontBold);
 
   const bytes = await pdfDoc.save();
@@ -743,16 +722,13 @@ export async function generateCertificatePdf(
 
 type PalestraCert = {
   titulo: string;
-  subtituloCertificado?: string | null;
-  textoDeclaracaoCertificado?: string | null;
   data: Date;
   horario: string;
   cargaHoraria: number;
-  local?: string | null;
-  cidadeUf?: string | null;
   temas?: string | null;
-  usarLogoAbrarastro?: boolean;
-  usarLogoFrutag?: boolean;
+  logoEventoPath?: string | null;
+  ministranteNome?: string | null;
+  ministranteAssinaturaPath?: string | null;
 };
 
 export function buildCertificateData(
@@ -760,23 +736,19 @@ export function buildCertificateData(
   palestra: PalestraCert,
   validacaoHash: string,
   formatDateBR: (d: Date) => string,
-  formatCpf: (c: string) => string
+  _formatCpf: (c: string) => string
 ): CertificateData {
   return {
     nome: inscricao.nome,
-    cpf: formatCpf(inscricao.cpf),
+    cpf: _formatCpf(inscricao.cpf),
     tituloPalestra: palestra.titulo,
-    subtituloCertificado: palestra.subtituloCertificado ?? null,
-    textoDeclaracaoCertificado: palestra.textoDeclaracaoCertificado ?? null,
     dataPalestra: formatDateBR(palestra.data),
     horario: palestra.horario,
-    mesAno: formatMonthYearBR(palestra.data),
     cargaHoraria: palestra.cargaHoraria,
-    local: palestra.local ?? null,
-    cidadeUf: palestra.cidadeUf ?? null,
     temas: parseTemasJson(palestra.temas ?? null),
-    usarLogoAbrarastro: true,
-    usarLogoFrutag: Boolean(palestra.usarLogoFrutag),
+    logoEventoPath: palestra.logoEventoPath ?? null,
+    ministranteNome: palestra.ministranteNome ?? null,
+    ministranteAssinaturaPath: palestra.ministranteAssinaturaPath ?? null,
     validacaoHash,
   };
 }

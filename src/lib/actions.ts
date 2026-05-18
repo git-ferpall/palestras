@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { randomBytes } from "crypto";
+import fs from "fs/promises";
 import { z } from "zod";
 import { prisma } from "./db";
 import {
@@ -14,6 +15,12 @@ import {
 } from "./auth";
 import { sendCertificateEmail } from "./email";
 import { generateValidacaoHash, temasToJson } from "./certificate-utils";
+import {
+  savePalestraAssinaturaFromDataUrl,
+  savePalestraAssinaturaFromFile,
+  savePalestraLogo,
+  palestraUploadDir,
+} from "./palestra-uploads";
 import {
   formatDateBR,
   isValidCpf,
@@ -29,8 +36,8 @@ const loginSchema = z.object({
 const palestraSchema = z.object({
   titulo: z.string().min(3, "Título obrigatório"),
   subtituloCertificado: z.string().optional(),
-  textoDeclaracaoCertificado: z.string().optional(),
   descricao: z.string().optional(),
+  ministranteNome: z.string().optional(),
   local: z.string().optional(),
   cidadeUf: z.string().optional(),
   data: z.string().min(1, "Data obrigatória"),
@@ -146,9 +153,8 @@ export async function createPalestraAction(
   const parsed = palestraSchema.safeParse({
     titulo: formData.get("titulo"),
     subtituloCertificado: formData.get("subtituloCertificado") || undefined,
-    textoDeclaracaoCertificado:
-      formData.get("textoDeclaracaoCertificado") || undefined,
     descricao: formData.get("descricao") || undefined,
+    ministranteNome: formData.get("ministranteNome") || undefined,
     local: formData.get("local") || undefined,
     cidadeUf: formData.get("cidadeUf") || undefined,
     data: formData.get("data"),
@@ -179,11 +185,10 @@ export async function createPalestraAction(
 
   const qrToken = randomBytes(24).toString("hex");
 
-  await prisma.palestra.create({
+  const palestra = await prisma.palestra.create({
     data: {
       titulo: parsed.data.titulo,
       subtituloCertificado: parsed.data.subtituloCertificado,
-      textoDeclaracaoCertificado: parsed.data.textoDeclaracaoCertificado,
       descricao: parsed.data.descricao,
       local: parsed.data.local,
       cidadeUf: parsed.data.cidadeUf,
@@ -191,12 +196,53 @@ export async function createPalestraAction(
       horario: parsed.data.horario,
       cargaHoraria: parsed.data.cargaHoraria,
       temas: temasLines.length > 0 ? temasToJson(temasLines) : null,
+      ministranteNome: parsed.data.ministranteNome?.trim() || null,
       usarLogoAbrarastro: true,
-      usarLogoFrutag: formData.get("usarLogoFrutag") === "on",
       qrToken,
       qrExpiraEm,
     },
   });
+
+  const logoFile = formData.get("logoEvento");
+  const assinaturaFile = formData.get("assinaturaArquivo");
+  const assinaturaDataUrl = String(formData.get("assinaturaDataUrl") ?? "");
+
+  let logoEventoPath: string | undefined;
+  let ministranteAssinaturaPath: string | undefined;
+
+  try {
+    if (logoFile instanceof File && logoFile.size > 0) {
+      logoEventoPath = await savePalestraLogo(palestra.id, logoFile);
+    }
+
+    if (assinaturaFile instanceof File && assinaturaFile.size > 0) {
+      ministranteAssinaturaPath = await savePalestraAssinaturaFromFile(
+        palestra.id,
+        assinaturaFile
+      );
+    } else if (assinaturaDataUrl.startsWith("data:image")) {
+      ministranteAssinaturaPath = await savePalestraAssinaturaFromDataUrl(
+        palestra.id,
+        assinaturaDataUrl
+      );
+    }
+  } catch {
+    await prisma.palestra.delete({ where: { id: palestra.id } });
+    return {
+      error:
+        "Palestra criada, mas falhou ao salvar logo ou assinatura. Tente novamente.",
+    };
+  }
+
+  if (logoEventoPath || ministranteAssinaturaPath) {
+    await prisma.palestra.update({
+      where: { id: palestra.id },
+      data: {
+        ...(logoEventoPath ? { logoEventoPath } : {}),
+        ...(ministranteAssinaturaPath ? { ministranteAssinaturaPath } : {}),
+      },
+    });
+  }
 
   revalidatePath("/admin");
   redirect("/admin");
@@ -367,6 +413,7 @@ export async function deletePalestraAction(
     return { error: "Palestra não encontrada" };
   }
 
+  await fs.rm(palestraUploadDir(palestraId), { recursive: true, force: true });
   await prisma.palestra.delete({ where: { id: palestraId } });
 
   revalidatePath("/admin");
