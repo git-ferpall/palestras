@@ -752,15 +752,19 @@ async function drawBackPage(
       borderWidth: 0.4,
     });
 
-    page.drawText(String(i + 1).padStart(2, "0"), {
-      x: tableLeft + 14,
-      y: yTop(height, y + padTop + fontSize - 2, fontSize),
+    const textStartY = y + padTop;
+    const numText = String(i + 1).padStart(2, "0");
+    const numW = fontBold.widthOfTextAtSize(numText, fontSize);
+    const numColCenter = tableLeft + colNumW / 2;
+    page.drawText(numText, {
+      x: numColCenter - numW / 2,
+      y: yTop(height, textStartY, fontSize),
       size: fontSize,
       font: fontBold,
       color: CertColors.green,
     });
 
-    let lineY = y + padTop;
+    let lineY = textStartY;
     for (const ln of lines) {
       page.drawText(ln, {
         x: temaX + 10,
@@ -782,16 +786,16 @@ async function drawBackPage(
     height: footerRowH,
     color: CertColors.greenDark,
   });
-  page.drawText(
-    `Carga horária total: ${data.cargaHoraria} hora(s)  •  Horário: ${data.horario}`,
-    {
-      x: temaX + 10,
-      y: yTop(height, footerY + 9, 10),
-      size: 10,
-      font: fontBold,
-      color: CertColors.white,
-    }
-  );
+  const footerText = `Carga horária total: ${data.cargaHoraria} hora(s)`;
+  const footerSize = 10;
+  const footerTextW = fontBold.widthOfTextAtSize(footerText, footerSize);
+  page.drawText(footerText, {
+    x: tableLeft + (tableW - footerTextW) / 2,
+    y: yTop(height, footerY + 9, footerSize),
+    size: footerSize,
+    font: fontBold,
+    color: CertColors.white,
+  });
 }
 
 export async function generateCertificatePdf(
