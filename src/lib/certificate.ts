@@ -218,9 +218,15 @@ function drawHeaderBand(page: PDFPage) {
 
 async function embedLogo(pdfDoc: PDFDocument, baseName: string) {
   const p = resolveLogoPath(baseName);
-  if (!p) return null;
+  if (!p) {
+    console.warn(
+      `Logo não encontrada: ${baseName} (procure em public/logos/ ou src/logos/)`
+    );
+    return null;
+  }
   const bytes = fs.readFileSync(p);
-  if (p.endsWith(".jpg") || p.endsWith(".jpeg")) {
+  const lower = p.toLowerCase();
+  if (lower.endsWith(".jpg") || lower.endsWith(".jpeg")) {
     return pdfDoc.embedJpg(bytes);
   }
   return pdfDoc.embedPng(bytes);
@@ -237,46 +243,82 @@ async function drawLogosInBand(
   const logoH = 40;
   const y = yTop(height, bandTop + 8, logoH);
 
-  try {
-    const abra = await embedLogo(pdfDoc, "abrarastro");
-    if (abra) {
-      const scale = logoH / abra.height;
-      page.drawImage(abra, {
-        x: L.left,
-        y,
-        width: abra.width * scale,
-        height: logoH,
-      });
-    } else {
-      page.drawText("ABRARASTRO", {
-        x: L.left,
-        y: y + 12,
-        size: 11,
-        font: fontBold,
-        color: C.white,
-      });
-    }
-  } catch (e) {
-    console.warn("Logo abrarastro:", e);
+  const abra = await embedLogo(pdfDoc, "abrarastro");
+  if (abra) {
+    const scale = logoH / abra.height;
+    const w = abra.width * scale;
+    page.drawRectangle({
+      x: L.left - 4,
+      y: y - 4,
+      width: w + 8,
+      height: logoH + 8,
+      color: rgb(1, 1, 1),
+      opacity: 0.92,
+    });
+    page.drawImage(abra, { x: L.left, y, width: w, height: logoH });
+  } else {
+    page.drawText("ABRARASTRO", {
+      x: L.left,
+      y: y + 12,
+      size: 11,
+      font: fontBold,
+      color: C.white,
+    });
   }
 
   if (usarFrutag) {
-    try {
-      const img = await embedLogo(pdfDoc, "frutag");
-      if (img) {
-        const scale = logoH / img.height;
-        const w = img.width * scale;
-        page.drawImage(img, {
-          x: width - L.right - w,
-          y,
-          width: w,
-          height: logoH,
-        });
-      }
-    } catch (e) {
-      console.warn("Logo frutag:", e);
+    const img = await embedLogo(pdfDoc, "frutag");
+    if (img) {
+      const scale = logoH / img.height;
+      const w = img.width * scale;
+      const logoX = width - L.right - w;
+      page.drawRectangle({
+        x: logoX - 4,
+        y: y - 4,
+        width: w + 8,
+        height: logoH + 8,
+        color: rgb(1, 1, 1),
+        opacity: 0.92,
+      });
+      page.drawImage(img, { x: logoX, y, width: w, height: logoH });
     }
+    drawFrutagApoioText(page, width, font, fontBold);
   }
+}
+
+/** Texto de apoio Frutag (canto superior direito, abaixo da faixa). */
+function drawFrutagApoioText(
+  page: PDFPage,
+  pageWidth: number,
+  font: PDFFont,
+  fontBold: PDFFont
+) {
+  const label = "Apoio técnico";
+  const brand = "FRUTAG";
+  const labelSize = 7;
+  const brandSize = 11;
+  const blockW = Math.max(
+    font.widthOfTextAtSize(label, labelSize),
+    fontBold.widthOfTextAtSize(brand, brandSize)
+  );
+  const x = pageWidth - L.right - blockW;
+  const yBrand = yTop(page.getSize().height, 98, brandSize);
+  const yLabel = yBrand - brandSize - 3;
+
+  page.drawText(label, {
+    x,
+    y: yLabel,
+    size: labelSize,
+    font,
+    color: C.muted,
+  });
+  page.drawText(brand, {
+    x,
+    y: yBrand,
+    size: brandSize,
+    font: fontBold,
+    color: C.teal,
+  });
 }
 
 function drawOrnamentLine(page: PDFPage, fromTop: number) {
@@ -368,33 +410,42 @@ function drawFooter(
   const x = L.left;
   const base = L.bottom;
 
+  const frutagExtra = data.usarLogoFrutag ? 22 : 0;
+
   page.drawLine({
-    start: { x, y: base + 46 },
-    end: { x: 300, y: base + 46 },
+    start: { x, y: base + 46 + frutagExtra },
+    end: { x: 300, y: base + 46 + frutagExtra },
     thickness: 0.6,
     color: C.teal,
   });
   page.drawText("ABRARASTRO", {
     x,
-    y: base + 30,
+    y: base + 30 + frutagExtra,
     size: 11,
     font: fontBold,
     color: C.navy,
   });
   page.drawText("Associação Brasileira de Rastreabilidade de Alimentos", {
     x,
-    y: base + 16,
+    y: base + 16 + frutagExtra,
     size: 8,
     font,
     color: C.slate,
   });
   if (data.usarLogoFrutag) {
-    page.drawText("Apoio técnico: Frutag — Rastreabilidade faz bem!", {
+    page.drawText("Apoio técnico", {
       x,
       y: base + 2,
-      size: 8,
+      size: 7,
       font,
       color: C.muted,
+    });
+    page.drawText("FRUTAG", {
+      x,
+      y: base + 12,
+      size: 10,
+      font: fontBold,
+      color: C.teal,
     });
   }
 }

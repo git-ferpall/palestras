@@ -16,7 +16,14 @@ try {
   process.exit(1);
 }
 
-console.log("\n=== 2. certificate.ts usa pdf-lib? ===");
+console.log("\n=== 2. Logos no disco ===");
+const { resolveLogoPath } = await import("../src/lib/certificate-utils.ts");
+for (const name of ["abrarastro", "frutag"]) {
+  const p = resolveLogoPath(name);
+  console.log(p ? `OK ${name}: ${p}` : `FALTA ${name} — coloque em public/logos/${name}.png`);
+}
+
+console.log("\n=== 3. certificate.ts usa pdf-lib? ===");
 const certSrc = fs.readFileSync("src/lib/certificate.ts", "utf8");
 if (certSrc.includes("pdf-lib")) {
   console.log("OK: src/lib/certificate.ts usa pdf-lib");
@@ -25,7 +32,7 @@ if (certSrc.includes("pdf-lib")) {
   process.exit(1);
 }
 
-console.log("\n=== 3. Prisma / inscrição ===");
+console.log("\n=== 4. Prisma / inscrição ===");
 const { PrismaClient } = await import("@prisma/client");
 const prisma = new PrismaClient();
 
@@ -43,7 +50,7 @@ try {
   }
   console.log("OK:", inscricao.nome, "| palestra:", inscricao.palestra.status);
 
-  console.log("\n=== 4. Gerar PDF ===");
+  console.log("\n=== 5. Gerar PDF ===");
   const { generateCertificatePdf, buildCertificateData } = await import(
     "../src/lib/certificate.ts"
   );

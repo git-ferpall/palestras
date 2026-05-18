@@ -142,7 +142,7 @@ export async function createPalestraAction(
       horario: parsed.data.horario,
       cargaHoraria: parsed.data.cargaHoraria,
       temas: temasLines.length > 0 ? temasToJson(temasLines) : null,
-      usarLogoAbrarastro: formData.get("usarLogoAbrarastro") === "on",
+      usarLogoAbrarastro: true,
       usarLogoFrutag: formData.get("usarLogoFrutag") === "on",
       qrToken,
       qrExpiraEm,

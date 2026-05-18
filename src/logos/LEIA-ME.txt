@@ -1,3 +1,6 @@
-Coloque os arquivos de logo nesta pasta:
-  - abrarastro.png  (ou .jpg)
-  - frutag.png      (ou .jpg)
+Coloque os arquivos de logo nesta pasta (ou em public/logos/):
+
+  - abrarastro.png  — sempre no certificado
+  - frutag.png      — opcional (apoio técnico)
+
+Formatos: .png, .jpg, .jpeg ou .webp

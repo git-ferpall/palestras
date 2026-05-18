@@ -1,0 +1,6 @@
+Logos usadas no certificado PDF (cópia também aceita em src/logos/):
+
+  abrarastro.png  — sempre exibida
+  frutag.png      — opcional (quando marcado no admin)
+
+Formatos: .png, .jpg, .jpeg ou .webp

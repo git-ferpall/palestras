@@ -109,13 +109,13 @@ export default function NovaPalestraPage() {
               Logos no certificado
             </p>
             <p className="mb-3 text-xs text-slate-500">
-              Coloque os arquivos em src/logos/abrarastro.png e frutag.png
+              Logo Abrarastro sempre no certificado. Arquivos em public/logos/ ou
+              src/logos/ (abrarastro.png e, se quiser, frutag.png).
             </p>
             <div className="flex flex-wrap gap-6">
-              <Checkbox name="usarLogoAbrarastro" label="Usar logo Abrarastro" />
               <Checkbox
                 name="usarLogoFrutag"
-                label="Usar logo Frutag"
+                label="Incluir logo e apoio técnico Frutag"
                 defaultChecked
               />
             </div>

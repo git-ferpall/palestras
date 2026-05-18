@@ -31,12 +31,50 @@ export function temasToJson(lines: string[]): string {
   return JSON.stringify(lines);
 }
 
+const LOGO_EXTS = [".png", ".jpg", ".jpeg", ".webp"];
+
+function logoSearchDirs(): string[] {
+  const cwd = process.cwd();
+  return [
+    path.join(cwd, "public", "logos"),
+    path.join(cwd, "src", "logos"),
+    path.join(cwd, "src"),
+    path.join(cwd, "logos"),
+  ];
+}
+
+/** Localiza arquivo de logo (abrarastro, frutag, etc.) em várias pastas. */
 export function resolveLogoPath(baseName: string): string | null {
-  const dir = path.join(process.cwd(), "src", "logos");
-  for (const ext of [".png", ".jpg", ".jpeg", ".webp"]) {
-    const filePath = path.join(dir, `${baseName}${ext}`);
-    if (fs.existsSync(filePath)) return filePath;
+  const key = baseName.toLowerCase();
+  const variants = [
+    baseName,
+    key,
+    key.charAt(0).toUpperCase() + key.slice(1),
+    key.toUpperCase(),
+  ];
+
+  for (const dir of logoSearchDirs()) {
+    if (!fs.existsSync(dir)) continue;
+
+    for (const name of variants) {
+      for (const ext of LOGO_EXTS) {
+        const filePath = path.join(dir, `${name}${ext}`);
+        if (fs.existsSync(filePath)) return filePath;
+      }
+    }
+
+    try {
+      for (const file of fs.readdirSync(dir)) {
+        if (!LOGO_EXTS.some((ext) => file.toLowerCase().endsWith(ext))) continue;
+        if (file.toLowerCase().includes(key)) {
+          return path.join(dir, file);
+        }
+      }
+    } catch {
+      /* ignore */
+    }
   }
+
   return null;
 }
 
