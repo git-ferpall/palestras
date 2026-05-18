@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { useState } from "react";
 
 type AbrarastroLogoProps = {
   height?: number;
@@ -15,13 +18,20 @@ export function AbrarastroLogo({
   showTagline = false,
   variant = "default",
 }: AbrarastroLogoProps) {
+  const [src, setSrc] = useState("/logos/abrarastro.png");
+
   const img = (
     <img
-      src="/api/logo/abrarastro"
+      src={src}
       alt="ABRARASTRO"
       height={height}
       className={`object-contain object-left ${className}`}
       style={{ height, width: "auto", maxWidth: height * 3.2 }}
+      onError={() => {
+        if (src !== "/api/logo/abrarastro") {
+          setSrc("/api/logo/abrarastro");
+        }
+      }}
     />
   );
 
