@@ -27,6 +27,18 @@ for (const [from, to] of copies) {
   }
 }
 
+const assSrc = path.join(root, "src", "assinaturas");
+const assDest = path.join(root, "public", "assinaturas");
+fs.mkdirSync(assDest, { recursive: true });
+if (fs.existsSync(assSrc)) {
+  for (const file of fs.readdirSync(assSrc)) {
+    if (/^presidencia\.(png|jpe?g)$/i.test(file)) {
+      fs.copyFileSync(path.join(assSrc, file), path.join(assDest, file));
+      console.log(`OK: assinaturas/${file} -> public/assinaturas/${file}`);
+    }
+  }
+}
+
 if (!fs.existsSync(path.join(destDir, "abrarastro.png"))) {
   console.warn(
     "AVISO: public/logos/abrarastro.png nao criado. Coloque logo-abrarastro-vertical.png em src/logos/"

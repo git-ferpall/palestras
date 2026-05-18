@@ -21,6 +21,7 @@ import {
   drawSignatureWithImage,
   embedBrandLogo,
   embedPalestraAsset,
+  resolvePresidenciaAssinaturaPath,
   CertColors,
   formatCargaHorasCertificado,
 } from "./certificate-layout";
@@ -580,14 +581,18 @@ async function drawFrontPage(
   const leftCx = L.left + 28 + sigW / 2;
   const rightCx = width - L.right - 28 - sigW / 2;
 
-  drawSignatureLine(
+  const presidenciaAssinatura = resolvePresidenciaAssinaturaPath();
+  await drawSignatureWithImage(
     page,
+    pdfDoc,
     leftCx,
     sigW,
     sigBase,
     "DIRETORIA ABRARASTRO",
+    presidenciaAssinatura,
     font,
-    fontBold
+    fontBold,
+    true
   );
 
   const ministranteLabel = data.ministranteNome?.trim() || "Ministrante";

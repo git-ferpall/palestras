@@ -1,0 +1,15 @@
+Assinaturas fixas nos certificados
+==================================
+
+Coloque aqui a imagem da assinatura da presidência:
+
+  presidencia.png   (ou presidencia.jpg)
+
+Ela aparece automaticamente acima da linha "DIRETORIA ABRARASTRO"
+em todos os certificados.
+
+Formato: PNG ou JPG, fundo transparente recomendado.
+
+No servidor, após enviar o arquivo:
+  sudo bash deploy/reparar-site.sh
+  (ou reinicie: sudo systemctl restart palestras)

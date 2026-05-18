@@ -212,6 +212,41 @@ export function drawSignatureLine(
   });
 }
 
+/** Assinatura fixa em src/assinaturas ou public/assinaturas (ex.: presidencia.png). */
+export function resolveAssinaturaFixaPath(baseName: string): string | null {
+  const dirs = [
+    path.join(process.cwd(), "src", "assinaturas"),
+    path.join(process.cwd(), "public", "assinaturas"),
+  ];
+  const exts = [".png", ".jpg", ".jpeg"];
+
+  for (const dir of dirs) {
+    if (!fs.existsSync(dir)) continue;
+    for (const ext of exts) {
+      const candidate = path.join(dir, `${baseName}${ext}`);
+      if (fs.existsSync(candidate)) return candidate;
+    }
+    try {
+      for (const file of fs.readdirSync(dir)) {
+        const lower = file.toLowerCase();
+        if (
+          lower.startsWith(baseName.toLowerCase()) &&
+          /\.(png|jpe?g)$/.test(lower)
+        ) {
+          return path.join(dir, file);
+        }
+      }
+    } catch {
+      /* ignore */
+    }
+  }
+  return null;
+}
+
+export function resolvePresidenciaAssinaturaPath(): string | null {
+  return resolveAssinaturaFixaPath("presidencia");
+}
+
 export async function drawSignatureWithImage(
   page: PDFPage,
   pdfDoc: PDFDocument,
@@ -221,14 +256,20 @@ export async function drawSignatureWithImage(
   label: string,
   imagePath: string | null | undefined,
   font: PDFFont,
-  fontBold: PDFFont
+  fontBold: PDFFont,
+  /** true = imagePath é caminho absoluto no disco (assinatura fixa) */
+  directFile = false
 ) {
   const lineY = baseY + 42;
   if (imagePath) {
-    const abs = resolvePalestraAsset(imagePath);
+    const abs = directFile
+      ? fs.existsSync(imagePath)
+        ? imagePath
+        : null
+      : resolvePalestraAsset(imagePath);
     const img = abs ? await embedImageFromPath(pdfDoc, abs) : null;
     if (img) {
-      const sigH = 38;
+      const sigH = 42;
       const scale = sigH / img.height;
       const w = Math.min(img.width * scale, lineWidth - 10);
       const h = img.height * (w / img.width);
