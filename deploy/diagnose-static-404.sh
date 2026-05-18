@@ -21,13 +21,16 @@ echo "CSS local: ${CSS:-nenhum}"
 echo "JS local:  ${JS:-nenhum}"
 
 if [[ -n "$CSS" ]]; then
+  # Use caminho relativo (find com path absoluto quebra o teste)
   REL="${CSS#.next/}"
+  URL="/_next/$REL"
+  echo "URL de teste: $URL"
   echo ""
-  echo "========== 3. Node :3000 /_next/$REL =========="
-  curl -sI "http://127.0.0.1:3000/_next/$REL" | head -5
+  echo "========== 3. Node :3000 =========="
+  curl -sI "http://127.0.0.1:3000$URL" | head -8
   echo ""
-  echo "========== 4. HTTPS público /_next/$REL =========="
-  curl -sI "$SITE/_next/$REL" | head -5
+  echo "========== 4. HTTPS público (segue redirects) =========="
+  curl -sIL "$SITE$URL" | head -12
 fi
 
 echo ""
