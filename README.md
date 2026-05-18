@@ -89,7 +89,15 @@ sudo systemctl reload apache2
 
 O arquivo `deploy/apache-palestras.conf` encaminha todo o tráfego de `/` para `http://127.0.0.1:3000` (Next.js).
 
-### 2. Servidor — deploy do código
+### 2. Instalar Node.js no servidor (se `npm: command not found`)
+
+```bash
+cd /var/www/palestras.abrarastro.org
+chmod +x deploy/install-node.sh
+sudo ./deploy/install-node.sh
+```
+
+### 3. Servidor — deploy do código
 
 ```bash
 cd /var/www/palestras.abrarastro.org
@@ -105,7 +113,7 @@ chmod +x deploy/install-server.sh
 ./deploy/install-server.sh
 ```
 
-### 3. Manter o app rodando (systemd)
+### 4. Manter o app rodando (systemd)
 
 ```bash
 sudo cp deploy/palestras.service /etc/systemd/system/
@@ -114,7 +122,7 @@ sudo systemctl enable --now palestras
 sudo systemctl status palestras
 ```
 
-### 4. HTTPS (recomendado)
+### 5. HTTPS (recomendado)
 
 ```bash
 sudo certbot --apache -d palestras.abrarastro.org

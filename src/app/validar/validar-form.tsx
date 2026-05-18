@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from "react/navigation";
+import { useRouter } from "next/navigation";
 import { FormEvent } from "react";
 import { Label, Input, Button } from "@/components/ui";
 
