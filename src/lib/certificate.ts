@@ -1,14 +1,25 @@
 import fs from "fs";
 import path from "path";
-import PDFDocument from "pdfkit";
+import { createRequire } from "module";
+import type PDFDocumentType from "pdfkit";
 import QRCode from "qrcode";
 import { getAppUrl } from "./utils";
 
-function initPdfKit() {
+/** Carrega pdfkit do node_modules (evita bundle que quebra caminho das fontes .afm) */
+function createPdfDocument(
+  options: ConstructorParameters<typeof PDFDocumentType>[0]
+) {
   const dataDir = path.join(process.cwd(), "node_modules/pdfkit/js/data");
-  if (fs.existsSync(dataDir)) {
-    process.env.PDFKIT_FONT_PATH = dataDir;
+  if (!fs.existsSync(path.join(dataDir, "Helvetica.afm"))) {
+    throw new Error(
+      `Fontes PDFKit não encontradas em ${dataDir}. Rode: npm install pdfkit`
+    );
   }
+  process.env.PDFKIT_FONT_PATH = dataDir;
+
+  const requirePdf = createRequire(path.join(process.cwd(), "package.json"));
+  const PDFDocument = requirePdf("pdfkit") as typeof PDFDocumentType;
+  return new PDFDocument(options);
 }
 import {
   formatValidacaoHashDisplay,
@@ -41,7 +52,7 @@ const COLORS = {
   muted: "#64748b",
 };
 
-type PdfDoc = InstanceType<typeof PDFDocument>;
+type PdfDoc = PDFDocumentType;
 
 function drawBorder(doc: PdfDoc) {
   const m = 28;
@@ -220,10 +231,8 @@ function drawBackPage(doc: PdfDoc, data: CertificateData) {
 export async function generateCertificatePdf(
   data: CertificateData
 ): Promise<Buffer> {
-  initPdfKit();
-
   return new Promise((resolve, reject) => {
-    const doc = new PDFDocument({
+    const doc = createPdfDocument({
       size: "A4",
       layout: "portrait",
       margins: { top: 28, bottom: 28, left: 28, right: 28 },
