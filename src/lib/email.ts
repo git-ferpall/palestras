@@ -10,10 +10,14 @@ function getTransporter() {
     return null;
   }
 
+  const port = Number(process.env.SMTP_PORT ?? 587);
+  const secure =
+    process.env.SMTP_SECURE === "true" || port === 465;
+
   return nodemailer.createTransport({
     host,
-    port: Number(process.env.SMTP_PORT ?? 587),
-    secure: false,
+    port,
+    secure,
     auth: { user, pass },
   });
 }
