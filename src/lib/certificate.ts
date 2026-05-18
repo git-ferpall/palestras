@@ -36,6 +36,16 @@ export type CertificateData = {
 /** A4 paisagem (largura × altura em pontos) */
 const A4_LANDSCAPE: [number, number] = [841.89, 595.28];
 
+/** pdf-lib: origem no canto inferior esquerdo (y sobe) */
+const L = {
+  left: 56,
+  right: 56,
+  bottom: 44,
+  qrSize: 62,
+  qrPad: 8,
+  qrReserve: 138,
+};
+
 function hexColor(hex: string): RGB {
   const n = hex.replace("#", "");
   return rgb(
@@ -219,33 +229,52 @@ async function embedLogo(pdfDoc: PDFDocument, baseName: string) {
 async function drawLogosInBand(
   page: PDFPage,
   pdfDoc: PDFDocument,
-  usarAbrarastro: boolean,
-  usarFrutag: boolean
+  usarFrutag: boolean,
+  fontBold: PDFFont
 ) {
   const { width, height } = page.getSize();
   const bandTop = 38;
   const logoH = 40;
   const y = yTop(height, bandTop + 8, logoH);
 
-  const drawOne = async (base: string, x: number) => {
-    try {
-      const img = await embedLogo(pdfDoc, base);
-      if (!img) return;
-      const scale = logoH / img.height;
-      const w = img.width * scale;
-      page.drawImage(img, { x, y, width: w, height: logoH });
-    } catch (e) {
-      console.warn(`Logo ${base}:`, e);
+  try {
+    const abra = await embedLogo(pdfDoc, "abrarastro");
+    if (abra) {
+      const scale = logoH / abra.height;
+      page.drawImage(abra, {
+        x: L.left,
+        y,
+        width: abra.width * scale,
+        height: logoH,
+      });
+    } else {
+      page.drawText("ABRARASTRO", {
+        x: L.left,
+        y: y + 12,
+        size: 11,
+        font: fontBold,
+        color: C.white,
+      });
     }
-  };
+  } catch (e) {
+    console.warn("Logo abrarastro:", e);
+  }
 
-  if (usarAbrarastro) await drawOne("abrarastro", 56);
   if (usarFrutag) {
-    const img = await embedLogo(pdfDoc, "frutag");
-    if (img) {
-      const scale = logoH / img.height;
-      const w = img.width * scale;
-      page.drawImage(img, { x: width - 56 - w, y, width: w, height: logoH });
+    try {
+      const img = await embedLogo(pdfDoc, "frutag");
+      if (img) {
+        const scale = logoH / img.height;
+        const w = img.width * scale;
+        page.drawImage(img, {
+          x: width - L.right - w,
+          y,
+          width: w,
+          height: logoH,
+        });
+      }
+    } catch (e) {
+      console.warn("Logo frutag:", e);
     }
   }
 }
@@ -330,6 +359,46 @@ function drawMetaCard(
   }
 }
 
+function drawFooter(
+  page: PDFPage,
+  data: CertificateData,
+  font: PDFFont,
+  fontBold: PDFFont
+) {
+  const x = L.left;
+  const base = L.bottom;
+
+  page.drawLine({
+    start: { x, y: base + 46 },
+    end: { x: 300, y: base + 46 },
+    thickness: 0.6,
+    color: C.teal,
+  });
+  page.drawText("ABRARASTRO", {
+    x,
+    y: base + 30,
+    size: 11,
+    font: fontBold,
+    color: C.navy,
+  });
+  page.drawText("Associação Brasileira de Rastreabilidade de Alimentos", {
+    x,
+    y: base + 16,
+    size: 8,
+    font,
+    color: C.slate,
+  });
+  if (data.usarLogoFrutag) {
+    page.drawText("Apoio técnico: Frutag — Rastreabilidade faz bem!", {
+      x,
+      y: base + 2,
+      size: 8,
+      font,
+      color: C.muted,
+    });
+  }
+}
+
 async function drawValidationBlock(
   page: PDFPage,
   pdfDoc: PDFDocument,
@@ -337,20 +406,36 @@ async function drawValidationBlock(
   font: PDFFont,
   fontBold: PDFFont
 ) {
-  const { width, height } = page.getSize();
-  const qrSize = 68;
-  const x = width - 52 - qrSize;
-  const fromTop = height - 52 - qrSize;
-  const y = yTop(height, fromTop, qrSize);
+  const { width } = page.getSize();
+  const qrSize = L.qrSize;
+  const pad = L.qrPad;
+  const labelH = 11;
+  const hashH = 10;
+  const blockW = qrSize + pad * 2;
+  const blockH = qrSize + pad * 2 + labelH + hashH;
+  const blockX = width - L.right - blockW;
+  const blockY = L.bottom;
 
   page.drawRectangle({
-    x: x - 8,
-    y: y - 28,
-    width: qrSize + 16,
-    height: qrSize + 36,
+    x: blockX,
+    y: blockY,
+    width: blockW,
+    height: blockH,
     color: C.paper,
-    borderColor: C.faint,
-    borderWidth: 0.5,
+    borderColor: C.teal,
+    borderWidth: 0.6,
+  });
+
+  const label = "VALIDAÇÃO";
+  const labelSize = 7;
+  page.drawText(label, {
+    x:
+      blockX +
+      (blockW - fontBold.widthOfTextAtSize(label, labelSize)) / 2,
+    y: blockY + blockH - labelH,
+    size: labelSize,
+    font: fontBold,
+    color: C.teal,
   });
 
   const url = `${getAppUrl()}/validar/${validacaoHash}`;
@@ -360,24 +445,21 @@ async function drawValidationBlock(
     type: "png",
   });
   const qrImage = await pdfDoc.embedPng(qrBuffer);
-  page.drawImage(qrImage, { x, y, width: qrSize, height: qrSize });
-
-  const label = "VALIDAÇÃO";
-  const labelSize = 7;
-  page.drawText(label, {
-    x: x + (qrSize - fontBold.widthOfTextAtSize(label, labelSize)) / 2,
-    y: y + qrSize + 6,
-    size: labelSize,
-    font: fontBold,
-    color: C.teal,
+  const qrX = blockX + pad;
+  const qrY = blockY + pad + hashH;
+  page.drawImage(qrImage, {
+    x: qrX,
+    y: qrY,
+    width: qrSize,
+    height: qrSize,
   });
 
   const hashText = formatValidacaoHashDisplay(validacaoHash);
-  const hashSize = 6;
+  const hashSize = 6.5;
   const hashW = font.widthOfTextAtSize(hashText, hashSize);
   page.drawText(hashText, {
-    x: x + (qrSize - hashW) / 2,
-    y: y - 10,
+    x: blockX + (blockW - hashW) / 2,
+    y: blockY + 3,
     size: hashSize,
     font,
     color: C.muted,
@@ -391,12 +473,12 @@ async function drawFrontPage(
   font: PDFFont,
   fontBold: PDFFont
 ) {
-  const { width, height } = page.getSize();
-  const contentW = width - 200;
+  const { width } = page.getSize();
+  const contentW = width - L.left - L.right - L.qrReserve;
 
   drawProfessionalFrame(page);
   drawHeaderBand(page);
-  await drawLogosInBand(page, pdfDoc, data.usarLogoAbrarastro, data.usarLogoFrutag);
+  await drawLogosInBand(page, pdfDoc, data.usarLogoFrutag, fontBold);
 
   let y = 108;
   drawCentered(page, "CERTIFICADO", y, 28, fontBold, C.navy);
@@ -438,13 +520,15 @@ async function drawFrontPage(
   );
   y += 12;
 
-  const cardW = (width - 120 - 32) / 3;
-  const cardX0 = 60;
+  const cardsTotalW = width - L.left - L.right - L.qrReserve;
+  const cardGap = 14;
+  const cardW = (cardsTotalW - cardGap * 2) / 3;
+  const cardX0 = L.left;
   const cidade = data.cidadeUf || data.local || "—";
   drawMetaCard(page, cardX0, y, cardW, "Local", cidade, font, fontBold);
   drawMetaCard(
     page,
-    cardX0 + cardW + 16,
+    cardX0 + cardW + cardGap,
     y,
     cardW,
     "Data",
@@ -454,7 +538,7 @@ async function drawFrontPage(
   );
   drawMetaCard(
     page,
-    cardX0 + (cardW + 16) * 2,
+    cardX0 + (cardW + cardGap) * 2,
     y,
     cardW,
     "Carga horária",
@@ -463,41 +547,7 @@ async function drawFrontPage(
     fontBold
   );
 
-  const footerY = height - 72;
-  page.drawLine({
-    start: { x: 60, y: footerY },
-    end: { x: 280, y: footerY },
-    thickness: 0.5,
-    color: C.faint,
-  });
-  page.drawText("ABRARASTRO", {
-    x: 60,
-    y: footerY - 14,
-    size: 9,
-    font: fontBold,
-    color: C.navy,
-  });
-  page.drawText(
-    "Associação Brasileira de Rastreabilidade de Alimentos",
-    {
-      x: 60,
-      y: footerY - 26,
-      size: 7,
-      font,
-      color: C.muted,
-    }
-  );
-
-  if (data.usarLogoFrutag) {
-    page.drawText("Apoio técnico: Frutag — Rastreabilidade faz bem!", {
-      x: 60,
-      y: footerY - 40,
-      size: 7,
-      font,
-      color: C.faint,
-    });
-  }
-
+  drawFooter(page, data, font, fontBold);
   await drawValidationBlock(page, pdfDoc, data.validacaoHash, font, fontBold);
 }
 
@@ -518,12 +568,13 @@ function drawBackPage(
   drawCentered(page, data.tituloPalestra, y, 11, font, C.teal);
   y += 22;
 
-  const tableLeft = 52;
-  const tableW = width - 104;
+  const tableLeft = L.left;
+  const tableW = width - L.left - L.right - L.qrReserve;
   const colNumW = 40;
   const temaX = tableLeft + colNumW;
   const temaW = tableW - colNumW;
-  const maxTableBottom = height - 100;
+  const qrBlockHeight = L.qrSize + L.qrPad * 2 + 24;
+  const maxYFromTop = height - L.bottom - qrBlockHeight - 16;
 
   page.drawRectangle({
     x: tableLeft,
@@ -555,7 +606,7 @@ function drawBackPage(
     const lines = wrapLines(temas[i], font, 9, temaW - 16);
     const rowH = Math.max(22, lines.length * 11 + 10);
 
-    if (y + rowH > maxTableBottom - 30) break;
+    if (y + rowH > maxYFromTop) break;
 
     if (i % 2 === 0) {
       page.drawRectangle({
@@ -658,7 +709,7 @@ export function buildCertificateData(
     local: palestra.local ?? null,
     cidadeUf: palestra.cidadeUf ?? null,
     temas: parseTemasJson(palestra.temas ?? null),
-    usarLogoAbrarastro: Boolean(palestra.usarLogoAbrarastro),
+    usarLogoAbrarastro: true,
     usarLogoFrutag: Boolean(palestra.usarLogoFrutag),
     validacaoHash,
   };
