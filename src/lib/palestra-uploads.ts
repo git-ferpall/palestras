@@ -29,11 +29,11 @@ export async function savePalestraLogo(
   const ext = extFromFile(file);
   const dir = palestraUploadDir(palestraId);
   await fs.mkdir(dir, { recursive: true });
-  const rel = `logo.${ext}`;
-  const abs = path.join(dir, rel);
+  const fileName = `logo.${ext}`;
+  const abs = path.join(dir, fileName);
   const buf = Buffer.from(await file.arrayBuffer());
   await fs.writeFile(abs, buf);
-  return rel;
+  return `${palestraId}/${fileName}`;
 }
 
 export async function savePalestraAssinaturaFromFile(
@@ -43,11 +43,11 @@ export async function savePalestraAssinaturaFromFile(
   const ext = extFromFile(file);
   const dir = palestraUploadDir(palestraId);
   await fs.mkdir(dir, { recursive: true });
-  const rel = `assinatura.${ext}`;
-  const abs = path.join(dir, rel);
+  const fileName = `assinatura.${ext}`;
+  const abs = path.join(dir, fileName);
   const buf = Buffer.from(await file.arrayBuffer());
   await fs.writeFile(abs, buf);
-  return rel;
+  return `${palestraId}/${fileName}`;
 }
 
 export async function savePalestraAssinaturaFromDataUrl(
@@ -59,8 +59,8 @@ export async function savePalestraAssinaturaFromDataUrl(
   const ext = match[1] === "jpeg" ? "jpg" : match[1].toLowerCase();
   const dir = palestraUploadDir(palestraId);
   await fs.mkdir(dir, { recursive: true });
-  const rel = `assinatura.${ext}`;
-  const abs = path.join(dir, rel);
+  const fileName = `assinatura.${ext}`;
+  const abs = path.join(dir, fileName);
   await fs.writeFile(abs, Buffer.from(match[2], "base64"));
-  return rel;
+  return `${palestraId}/${fileName}`;
 }

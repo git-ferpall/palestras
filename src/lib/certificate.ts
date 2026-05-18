@@ -471,6 +471,17 @@ async function drawValidationBlock(
   });
 }
 
+function estimateWrappedHeight(
+  text: string,
+  font: PDFFont,
+  size: number,
+  maxWidth: number,
+  lineGap: number
+) {
+  const lines = wrapLines(text, font, size, maxWidth);
+  return lines.length * (size + lineGap) - lineGap;
+}
+
 async function drawFrontPage(
   page: PDFPage,
   pdfDoc: PDFDocument,
@@ -479,58 +490,89 @@ async function drawFrontPage(
   fontBold: PDFFont
 ) {
   const { width, height } = page.getSize();
-  const contentW = width - L.left - L.right - 40;
+  const contentW = width - L.left - L.right - 56;
 
   drawClassicCertificateFrame(page);
   await drawAbrarastroWatermark(page, pdfDoc);
 
-  const logoH = 52;
-  const logoY = yTop(height, 36, logoH);
+  const logoH = 58;
+  const logoY = yTop(height, 32, logoH);
   const abra = await embedBrandLogo(pdfDoc, "abrarastro");
   if (abra) {
     const scale = logoH / abra.height;
     const w = abra.width * scale;
-    page.drawImage(abra, { x: L.left + 8, y: logoY, width: w, height: logoH });
+    page.drawImage(abra, { x: L.left + 12, y: logoY, width: w, height: logoH });
   }
 
   const eventLogo = await embedPalestraAsset(pdfDoc, data.logoEventoPath);
   if (eventLogo) {
-    const maxW = 120;
-    const scale = Math.min(logoH / eventLogo.height, maxW / eventLogo.width);
+    const maxW = 165;
+    const maxH = 72;
+    const scale = Math.min(maxH / eventLogo.height, maxW / eventLogo.width);
     const w = eventLogo.width * scale;
     const h = eventLogo.height * scale;
     page.drawImage(eventLogo, {
-      x: width - L.right - w - 8,
+      x: width - L.right - w - 12,
       y: logoY + (logoH - h) / 2,
       width: w,
       height: h,
     });
   }
 
-  let y = 118;
-  drawCentered(page, "CERTIFICADO DE CONCLUSÃO", y, 16, fontBold, CertColors.greenDark);
-  y += 36;
-
-  drawCentered(page, data.nome, y, 26, fontBold, CertColors.text);
-  y += 38;
-
-  drawCentered(page, "Participou da Palestra", y, 12, font, CertColors.muted);
-  y += 22;
+  const sz = {
+    tituloCert: 22,
+    nome: 30,
+    participou: 16,
+    palestra: 18,
+    data: 16,
+  };
 
   const tituloLinha = `${data.tituloPalestra.toUpperCase()} ${formatCargaHorasCertificado(data.cargaHoraria)}`;
+  const palestraH = estimateWrappedHeight(
+    tituloLinha,
+    fontBold,
+    sz.palestra,
+    contentW,
+    6
+  );
+
+  const blockH =
+    sz.tituloCert +
+    20 +
+    sz.nome +
+    18 +
+    sz.participou +
+    16 +
+    palestraH +
+    16 +
+    sz.data;
+
+  const areaTop = 95;
+  const areaBottom = height - 118;
+  let y = areaTop + Math.max(0, (areaBottom - areaTop - blockH) / 2);
+
+  drawCentered(page, "CERTIFICADO DE CONCLUSÃO", y, sz.tituloCert, fontBold, CertColors.greenDark);
+  y += sz.tituloCert + 20;
+
+  drawCentered(page, data.nome, y, sz.nome, fontBold, CertColors.text);
+  y += sz.nome + 18;
+
+  drawCentered(page, "Participou da Palestra", y, sz.participou, font, CertColors.muted);
+  y += sz.participou + 16;
+
   y = drawWrappedCentered(
     page,
     tituloLinha,
     y,
-    11,
+    sz.palestra,
     fontBold,
     CertColors.greenDark,
     contentW,
-    5
+    6
   );
-  y += 14;
+  y += 16;
 
-  drawCentered(page, data.dataPalestra, y, 12, font, CertColors.text);
+  drawCentered(page, data.dataPalestra, y, sz.data, font, CertColors.text);
 
   const sigBase = L.bottom + 8;
   const sigW = 220;

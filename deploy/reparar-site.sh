@@ -35,6 +35,8 @@ echo ""
 echo "========== 4. Permissões (serviço roda como www-data) =========="
 chown -R www-data:www-data .next
 chown -R www-data:www-data public/logos 2>/dev/null || true
+mkdir -p data/uploads/palestras
+chown -R www-data:www-data data/uploads
 chown www-data:www-data .env 2>/dev/null || true
 
 echo ""

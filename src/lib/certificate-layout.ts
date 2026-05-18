@@ -1,8 +1,11 @@
 import fs from "fs";
+import path from "path";
 import type { PDFDocument, PDFPage, PDFFont, RGB } from "pdf-lib";
 import { rgb } from "pdf-lib";
 import { resolveLogoPath } from "./certificate-utils";
 import { resolvePalestraAsset } from "./palestra-uploads";
+
+const UPLOAD_ROOT = path.join(process.cwd(), "data", "uploads", "palestras");
 
 function hexColor(hex: string): RGB {
   const n = hex.replace("#", "");
@@ -32,22 +35,62 @@ export async function embedImageBytes(pdfDoc: PDFDocument, bytes: Buffer, filePa
   if (lower.endsWith(".jpg") || lower.endsWith(".jpeg")) {
     return pdfDoc.embedJpg(bytes);
   }
+  if (lower.endsWith(".webp")) {
+    console.warn(`WebP não suportado no PDF: ${filePath}. Use PNG ou JPG.`);
+    return null;
+  }
   return pdfDoc.embedPng(bytes);
 }
 
 export async function embedImageFromPath(pdfDoc: PDFDocument, filePath: string) {
   if (!fs.existsSync(filePath)) return null;
   const bytes = fs.readFileSync(filePath);
-  return embedImageBytes(pdfDoc, bytes, filePath);
+  try {
+    return await embedImageBytes(pdfDoc, bytes, filePath);
+  } catch (e) {
+    console.warn(`Falha ao embutir imagem ${filePath}:`, e);
+    return null;
+  }
 }
 
 export async function embedPalestraAsset(
   pdfDoc: PDFDocument,
   storedPath: string | null | undefined
 ) {
+  if (!storedPath?.trim()) return null;
+
   const abs = resolvePalestraAsset(storedPath);
-  if (!abs) return null;
-  return embedImageFromPath(pdfDoc, abs);
+  if (abs && fs.existsSync(abs)) {
+    return embedImageFromPath(pdfDoc, abs);
+  }
+
+  const parts = storedPath.split("/").filter(Boolean);
+
+  if (parts.length >= 2) {
+    const dir = path.join(UPLOAD_ROOT, parts[0]);
+    const fileName = parts[parts.length - 1]!;
+    for (const name of [fileName, "logo.png", "logo.jpg", "logo.jpeg"]) {
+      const candidate = path.join(dir, name);
+      if (fs.existsSync(candidate)) {
+        return embedImageFromPath(pdfDoc, candidate);
+      }
+    }
+  }
+
+  if (parts.length === 1 && parts[0]!.startsWith("logo.")) {
+    try {
+      for (const id of fs.readdirSync(UPLOAD_ROOT)) {
+        const candidate = path.join(UPLOAD_ROOT, id, parts[0]!);
+        if (fs.existsSync(candidate)) {
+          return embedImageFromPath(pdfDoc, candidate);
+        }
+      }
+    } catch {
+      /* pasta de uploads ainda não existe */
+    }
+  }
+
+  return null;
 }
 
 export async function embedBrandLogo(pdfDoc: PDFDocument, baseName: string) {

@@ -106,13 +106,14 @@ export default function NovaPalestraPage() {
               Logo do evento (canto superior direito)
             </p>
             <p className="mb-3 text-xs text-slate-500">
-              Substitui o logo Frutag. A logo Abrarastro permanece à esquerda e
-              como marca d&apos;água no centro do certificado.
+              PNG ou JPG (recomendado). Aparece no canto superior direito do
+              certificado. A Abrarastro permanece à esquerda e como marca
+              d&apos;água.
             </p>
             <input
               type="file"
               name="logoEvento"
-              accept="image/png,image/jpeg,image/webp"
+              accept="image/png,image/jpeg"
               className="block w-full text-sm text-slate-600 file:mr-4 file:rounded-lg file:border-0 file:bg-white file:px-4 file:py-2 file:text-sm file:font-medium file:text-slate-800 hover:file:bg-slate-100"
             />
           </div>
