@@ -692,15 +692,46 @@ async function drawBackPage(
   const temas =
     data.temas.length > 0 ? data.temas : ["Conteúdo conforme programação do evento"];
 
-  const bodyHeight = Math.max(60, bodyEndY - y);
-  const rowH = Math.max(36, bodyHeight / temas.length);
-  const fontSize = 10;
-  const lineGap = 12;
+  const tableBodyStartY = y;
+  const maxRowsHeight = Math.max(40, bodyEndY - tableBodyStartY);
+
+  let fontSize = 10;
+  let lineGap = 11;
+  if (temas.length > 7) {
+    fontSize = 9;
+    lineGap = 10;
+  }
+  if (temas.length > 11) {
+    fontSize = 8;
+    lineGap = 9;
+  }
+
+  const rowHeights = temas.map((tema) => {
+    const lines = wrapLines(tema, font, fontSize, temaW - 20);
+    const textH = lines.length * lineGap;
+    return Math.max(fontSize + 14, textH + 10);
+  });
+
+  let totalH = rowHeights.reduce((sum, h) => sum + h, 0);
+  if (totalH > maxRowsHeight) {
+    const scale = maxRowsHeight / totalH;
+    for (let i = 0; i < rowHeights.length; i++) {
+      rowHeights[i] = Math.max(fontSize + 10, rowHeights[i] * scale);
+    }
+    totalH = rowHeights.reduce((sum, h) => sum + h, 0);
+    if (totalH > maxRowsHeight) {
+      const scale2 = maxRowsHeight / totalH;
+      for (let i = 0; i < rowHeights.length; i++) {
+        rowHeights[i] *= scale2;
+      }
+    }
+  }
 
   for (let i = 0; i < temas.length; i++) {
-    const lines = wrapLines(temas[i], font, fontSize, temaW - 20);
+    const rowH = rowHeights[i]!;
+    const lines = wrapLines(temas[i]!, font, fontSize, temaW - 20);
     const textH = lines.length * lineGap;
-    const padTop = Math.max(8, (rowH - textH) / 2);
+    const padTop = Math.max(6, (rowH - textH) / 2);
 
     if (i % 2 === 0) {
       page.drawRectangle({
