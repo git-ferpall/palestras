@@ -33,6 +33,17 @@ export function temasToJson(lines: string[]): string {
 
 const LOGO_EXTS = [".png", ".jpg", ".jpeg", ".webp"];
 
+/** Nomes de arquivo aceitos por marca (ordem de prioridade). */
+const LOGO_ALIASES: Record<string, string[]> = {
+  abrarastro: [
+    "abrarastro",
+    "logo-abrarastro-vertical",
+    "logo-abrarastro",
+    "abrarastro-vertical",
+  ],
+  frutag: ["frutag", "logo-frutag"],
+};
+
 function logoSearchDirs(): string[] {
   const cwd = process.cwd();
   return [
@@ -43,20 +54,24 @@ function logoSearchDirs(): string[] {
   ];
 }
 
+function isImageFile(fileName: string) {
+  const lower = fileName.toLowerCase();
+  return LOGO_EXTS.some((ext) => lower.endsWith(ext));
+}
+
 /** Localiza arquivo de logo (abrarastro, frutag, etc.) em várias pastas. */
 export function resolveLogoPath(baseName: string): string | null {
   const key = baseName.toLowerCase();
-  const variants = [
-    baseName,
+  const names = [
+    ...(LOGO_ALIASES[key] ?? []),
     key,
     key.charAt(0).toUpperCase() + key.slice(1),
-    key.toUpperCase(),
   ];
 
   for (const dir of logoSearchDirs()) {
     if (!fs.existsSync(dir)) continue;
 
-    for (const name of variants) {
+    for (const name of names) {
       for (const ext of LOGO_EXTS) {
         const filePath = path.join(dir, `${name}${ext}`);
         if (fs.existsSync(filePath)) return filePath;
@@ -64,11 +79,15 @@ export function resolveLogoPath(baseName: string): string | null {
     }
 
     try {
+      const matches: string[] = [];
       for (const file of fs.readdirSync(dir)) {
-        if (!LOGO_EXTS.some((ext) => file.toLowerCase().endsWith(ext))) continue;
-        if (file.toLowerCase().includes(key)) {
-          return path.join(dir, file);
-        }
+        if (!isImageFile(file)) continue;
+        const lower = file.toLowerCase();
+        if (lower.includes(key)) matches.push(file);
+      }
+      if (matches.length > 0) {
+        matches.sort((a, b) => a.length - b.length);
+        return path.join(dir, matches[0]);
       }
     } catch {
       /* ignore */
