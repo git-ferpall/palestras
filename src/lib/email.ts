@@ -11,9 +11,8 @@ function getTransporter() {
   }
 
   const port = Number(process.env.SMTP_PORT ?? 587);
-  const secure =
-    process.env.SMTP_SECURE === "true" ||
-    (process.env.SMTP_SECURE !== "false" && port === 465);
+  // 465 = SSL direto (secure: true) | 587 = STARTTLS (secure: false)
+  const secure = port === 465 && process.env.SMTP_SECURE !== "false";
 
   const tls: { servername: string; minVersion: "TLSv1.2"; rejectUnauthorized?: boolean } =
     {

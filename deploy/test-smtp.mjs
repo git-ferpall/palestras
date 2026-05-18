@@ -38,9 +38,7 @@ if (!host || !user || !pass) {
 }
 
 const port = Number(process.env.SMTP_PORT ?? 587);
-const secure =
-  process.env.SMTP_SECURE === "true" ||
-  (process.env.SMTP_SECURE !== "false" && port === 465);
+const secure = port === 465 && process.env.SMTP_SECURE !== "false";
 
 console.log("Config:", { host, port, secure, user, to });
 
