@@ -248,6 +248,151 @@ export async function createPalestraAction(
   redirect("/admin");
 }
 
+type InscricaoEmailRow = {
+  id: string;
+  email: string;
+  nome: string;
+  certificadoCodigo: string;
+  validacaoHash: string | null;
+};
+
+async function enviarCertificadoParaInscricao(
+  inscricao: InscricaoEmailRow,
+  tituloPalestra: string
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  let hash = inscricao.validacaoHash ?? generateValidacaoHash();
+  if (!inscricao.validacaoHash) {
+    await prisma.inscricao.update({
+      where: { id: inscricao.id },
+      data: { validacaoHash: hash },
+    });
+  }
+
+  const emailResult = await sendCertificateEmail({
+    to: inscricao.email,
+    nome: inscricao.nome,
+    tituloPalestra,
+    certificadoCodigo: inscricao.certificadoCodigo,
+    validacaoHash: hash,
+  });
+
+  if (!emailResult.ok) {
+    console.error(
+      `Certificado não enviado para ${inscricao.email}: ${emailResult.error}`
+    );
+    return { ok: false, error: emailResult.error };
+  }
+
+  await prisma.inscricao.update({
+    where: { id: inscricao.id },
+    data: {
+      certificadoEnviado: true,
+      certificadoEnviadoEm: new Date(),
+    },
+  });
+
+  return { ok: true };
+}
+
+export async function reenviarCertificadoEmailAction(
+  inscricaoId: string
+): Promise<ActionState> {
+  try {
+    await requireAdmin();
+  } catch {
+    return { error: "Sessão expirada. Faça login novamente." };
+  }
+
+  const inscricao = await prisma.inscricao.findUnique({
+    where: { id: inscricaoId },
+    include: { palestra: { select: { id: true, titulo: true, status: true } } },
+  });
+
+  if (!inscricao) return { error: "Inscrição não encontrada" };
+  if (inscricao.palestra.status !== "ENCERRADA") {
+    return {
+      error: "A palestra precisa estar encerrada para enviar o certificado por e-mail.",
+    };
+  }
+
+  const result = await enviarCertificadoParaInscricao(inscricao, inscricao.palestra.titulo);
+
+  revalidatePath("/admin");
+  revalidatePath(`/admin/palestras/${inscricao.palestra.id}`);
+
+  if (!result.ok) {
+    return {
+      error: `Falha ao enviar para ${inscricao.email}: ${result.error}`,
+    };
+  }
+
+  return {
+    success: `E-mail de certificado reenviado para ${inscricao.email}.`,
+  };
+}
+
+export async function reenviarCertificadosLoteAction(
+  palestraId: string,
+  modo: "pendentes" | "todos"
+): Promise<ActionState> {
+  try {
+    await requireAdmin();
+  } catch {
+    return { error: "Sessão expirada. Faça login novamente." };
+  }
+
+  const palestra = await prisma.palestra.findUnique({
+    where: { id: palestraId },
+    include: {
+      inscricoes: {
+        where: modo === "pendentes" ? { certificadoEnviado: false } : undefined,
+      },
+    },
+  });
+
+  if (!palestra) return { error: "Palestra não encontrada" };
+  if (palestra.status !== "ENCERRADA") {
+    return {
+      error: "A palestra precisa estar encerrada para enviar certificados por e-mail.",
+    };
+  }
+
+  if (palestra.inscricoes.length === 0) {
+    return {
+      success:
+        modo === "pendentes"
+          ? "Nenhum e-mail pendente."
+          : "Nenhum inscrito nesta palestra.",
+    };
+  }
+
+  let enviados = 0;
+  let falhas = 0;
+  const erros: string[] = [];
+
+  for (const inscricao of palestra.inscricoes) {
+    const result = await enviarCertificadoParaInscricao(inscricao, palestra.titulo);
+    if (result.ok) enviados++;
+    else {
+      falhas++;
+      if (erros.length < 3) erros.push(`${inscricao.email}: ${result.error}`);
+    }
+  }
+
+  revalidatePath("/admin");
+  revalidatePath(`/admin/palestras/${palestraId}`);
+
+  if (falhas === 0) {
+    return {
+      success: `${enviados} e-mail(s) enviado(s) com sucesso.`,
+    };
+  }
+
+  return {
+    success: `${enviados} enviado(s), ${falhas} falha(s).${erros.length ? ` ${erros.join("; ")}` : ""}`,
+  };
+}
+
 export async function encerrarPalestraAction(
   palestraId: string
 ): Promise<ActionState> {
@@ -277,38 +422,13 @@ export async function encerrarPalestraAction(
     let falhas = 0;
 
     for (const inscricao of palestra.inscricoes) {
-      const hash =
-        inscricao.validacaoHash ?? generateValidacaoHash();
-      if (!inscricao.validacaoHash) {
-        await prisma.inscricao.update({
-          where: { id: inscricao.id },
-          data: { validacaoHash: hash },
-        });
-      }
+      const result = await enviarCertificadoParaInscricao(
+        inscricao,
+        palestra.titulo
+      );
 
-      const emailResult = await sendCertificateEmail({
-        to: inscricao.email,
-        nome: inscricao.nome,
-        tituloPalestra: palestra.titulo,
-        certificadoCodigo: inscricao.certificadoCodigo,
-        validacaoHash: hash,
-      });
-
-      if (emailResult.ok) {
-        await prisma.inscricao.update({
-          where: { id: inscricao.id },
-          data: {
-            certificadoEnviado: true,
-            certificadoEnviadoEm: new Date(),
-          },
-        });
-        enviados++;
-      } else {
-        falhas++;
-        console.error(
-          `Certificado não enviado para ${inscricao.email}: ${emailResult.error}`
-        );
-      }
+      if (result.ok) enviados++;
+      else falhas++;
     }
 
     revalidatePath("/admin");

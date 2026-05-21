@@ -29,6 +29,7 @@ export async function GET(
           email: true,
           telefone: true,
           certificadoEnviado: true,
+          certificadoEnviadoEm: true,
           createdAt: true,
         },
       },

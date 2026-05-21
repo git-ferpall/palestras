@@ -13,6 +13,7 @@ type Inscricao = {
   email: string;
   telefone: string;
   certificadoEnviado: boolean;
+  certificadoEnviadoEm: string | null;
 };
 
 type PalestraInfo = {
@@ -128,7 +129,8 @@ export function InscritosModalButton({
                   <th className="px-3 py-2.5 font-semibold">CPF</th>
                   <th className="px-3 py-2.5 font-semibold">E-mail</th>
                   <th className="px-3 py-2.5 font-semibold">Telefone</th>
-                  <th className="px-3 py-2.5 font-semibold">Certificado</th>
+                  <th className="px-3 py-2.5 font-semibold">E-mail cert.</th>
+                  <th className="px-3 py-2.5 font-semibold">Enviado em</th>
                 </tr>
               </thead>
               <tbody>
@@ -146,11 +148,20 @@ export function InscritosModalButton({
                       {formatPhone(i.telefone)}
                     </td>
                     <td className="px-3 py-2">
-                      {i.certificadoEnviado ? (
-                        <Badge tone="success">Enviado</Badge>
+                      {palestra?.status === "ENCERRADA" ? (
+                        i.certificadoEnviado ? (
+                          <Badge tone="success">Enviado</Badge>
+                        ) : (
+                          <Badge tone="warning">Pendente</Badge>
+                        )
                       ) : (
-                        <Badge>Pendente</Badge>
+                        <span className="text-slate-400">—</span>
                       )}
+                    </td>
+                    <td className="px-3 py-2 text-slate-600">
+                      {i.certificadoEnviadoEm
+                        ? new Date(i.certificadoEnviadoEm).toLocaleString("pt-BR")
+                        : "—"}
                     </td>
                   </tr>
                 ))}

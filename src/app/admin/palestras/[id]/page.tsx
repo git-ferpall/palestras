@@ -18,6 +18,8 @@ import { EncerrarPalestraButton } from "./encerrar-button";
 import { ExcluirPalestraButton } from "./excluir-button";
 import { DownloadQrButton } from "./download-qr-button";
 import { PreviewCertificadoButton } from "./preview-certificado-button";
+import { ReenviarCertificadoButton } from "./reenviar-certificado-button";
+import { ReenviarEmailsLote } from "./reenviar-emails-lote";
 
 export default async function PalestraDetailPage({
   params,
@@ -45,6 +47,12 @@ export default async function PalestraDetailPage({
   const qrDataUrl = await generateQrCodeDataUrl(inscricaoUrl);
   const qrAtivo =
     palestra.status === "AGENDADA" && new Date() <= palestra.qrExpiraEm;
+
+  const emailsEnviados = palestra.inscricoes.filter(
+    (i) => i.certificadoEnviado
+  ).length;
+  const emailsPendentes = palestra.inscricoes.length - emailsEnviados;
+  const palestraEncerrada = palestra.status === "ENCERRADA";
 
   return (
     <Container>
@@ -179,9 +187,42 @@ export default async function PalestraDetailPage({
       </div>
 
       <Card className="mt-6">
-        <h3 className="mb-4 font-semibold">
-          Inscritos ({palestra.inscricoes.length})
-        </h3>
+        <div className="mb-4 flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <h3 className="font-semibold">
+              Inscritos ({palestra.inscricoes.length})
+            </h3>
+            {palestraEncerrada && palestra.inscricoes.length > 0 && (
+              <p className="mt-1 text-sm text-slate-600">
+                E-mails de certificado:{" "}
+                <span className="font-medium text-emerald-700">
+                  {emailsEnviados} enviado(s)
+                </span>
+                {emailsPendentes > 0 && (
+                  <>
+                    {" "}
+                    ·{" "}
+                    <span className="font-medium text-amber-700">
+                      {emailsPendentes} pendente(s)
+                    </span>
+                  </>
+                )}
+              </p>
+            )}
+            {!palestraEncerrada && palestra.inscricoes.length > 0 && (
+              <p className="mt-1 text-sm text-slate-500">
+                Os e-mails serão enviados ao encerrar a palestra.
+              </p>
+            )}
+          </div>
+          {palestraEncerrada && palestra.inscricoes.length > 0 && (
+            <ReenviarEmailsLote
+              palestraId={palestra.id}
+              totalPendentes={emailsPendentes}
+              totalInscritos={palestra.inscricoes.length}
+            />
+          )}
+        </div>
         {palestra.inscricoes.length === 0 ? (
           <p className="text-sm text-slate-500">Nenhuma inscrição ainda.</p>
         ) : (
@@ -193,7 +234,11 @@ export default async function PalestraDetailPage({
                   <th className="py-2 pr-4">CPF</th>
                   <th className="py-2 pr-4">E-mail</th>
                   <th className="py-2 pr-4">Validação</th>
-                  <th className="py-2 pr-4">Certificado</th>
+                  <th className="py-2 pr-4">E-mail cert.</th>
+                  <th className="py-2 pr-4">Enviado em</th>
+                  {palestraEncerrada && (
+                    <th className="py-2 pr-4">Ações</th>
+                  )}
                 </tr>
               </thead>
               <tbody>
@@ -208,12 +253,26 @@ export default async function PalestraDetailPage({
                         : "—"}
                     </td>
                     <td className="py-2 pr-4">
-                      {i.certificadoEnviado ? (
-                        <Badge tone="success">Enviado</Badge>
+                      {palestraEncerrada ? (
+                        i.certificadoEnviado ? (
+                          <Badge tone="success">Enviado</Badge>
+                        ) : (
+                          <Badge tone="warning">Pendente</Badge>
+                        )
                       ) : (
-                        <Badge>Pendente</Badge>
+                        <span className="text-slate-400">—</span>
                       )}
                     </td>
+                    <td className="py-2 pr-4 text-slate-600">
+                      {i.certificadoEnviadoEm
+                        ? formatDateTimeBR(i.certificadoEnviadoEm)
+                        : "—"}
+                    </td>
+                    {palestraEncerrada && (
+                      <td className="py-2 pr-4">
+                        <ReenviarCertificadoButton inscricaoId={i.id} />
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>
