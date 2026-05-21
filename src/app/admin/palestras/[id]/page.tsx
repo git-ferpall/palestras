@@ -19,6 +19,7 @@ import { DownloadQrButton } from "./download-qr-button";
 import { PreviewCertificadoButton } from "./preview-certificado-button";
 import { ReenviarCertificadoButton } from "./reenviar-certificado-button";
 import { ReenviarEmailsLote } from "./reenviar-emails-lote";
+import { EditarEmailInscricao } from "./editar-email-inscricao";
 
 export default async function PalestraDetailPage({
   params,
@@ -235,9 +236,7 @@ export default async function PalestraDetailPage({
                   <th className="py-2 pr-4">Validação</th>
                   <th className="py-2 pr-4">E-mail cert.</th>
                   <th className="py-2 pr-4">Enviado em</th>
-                  {palestraEncerrada && (
-                    <th className="py-2 pr-4">Ações</th>
-                  )}
+                  {palestraEncerrada && <th className="py-2 pr-4">Reenviar</th>}
                 </tr>
               </thead>
               <tbody>
@@ -245,7 +244,13 @@ export default async function PalestraDetailPage({
                   <tr key={i.id} className="border-b border-slate-100">
                     <td className="py-2 pr-4">{i.nome}</td>
                     <td className="py-2 pr-4">{formatCpf(i.cpf)}</td>
-                    <td className="py-2 pr-4">{i.email}</td>
+                    <td className="py-2 pr-4">
+                      <EditarEmailInscricao
+                        inscricaoId={i.id}
+                        email={i.email}
+                        nome={i.nome}
+                      />
+                    </td>
                     <td className="py-2 pr-4 font-mono text-xs">
                       {i.validacaoHash
                         ? formatValidacaoHashDisplay(i.validacaoHash)

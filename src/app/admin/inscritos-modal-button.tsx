@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Modal } from "@/components/modal";
 import { Button, Badge } from "@/components/ui";
 import { formatCpf, formatPhone } from "@/lib/utils";
+import { EditarEmailInscricao } from "@/app/admin/palestras/[id]/editar-email-inscricao";
 
 type Inscricao = {
   id: string;
@@ -143,7 +144,27 @@ export function InscritosModalButton({
                       {i.nome}
                     </td>
                     <td className="px-3 py-2 text-slate-600">{formatCpf(i.cpf)}</td>
-                    <td className="px-3 py-2 text-slate-600">{i.email}</td>
+                    <td className="px-3 py-2">
+                      <EditarEmailInscricao
+                        inscricaoId={i.id}
+                        email={i.email}
+                        nome={i.nome}
+                        onUpdated={(novoEmail) => {
+                          setInscricoes((prev) =>
+                            prev.map((row) =>
+                              row.id === i.id
+                                ? {
+                                    ...row,
+                                    email: novoEmail,
+                                    certificadoEnviado: false,
+                                    certificadoEnviadoEm: null,
+                                  }
+                                : row
+                            )
+                          );
+                        }}
+                      />
+                    </td>
                     <td className="px-3 py-2 text-slate-600">
                       {formatPhone(i.telefone)}
                     </td>

@@ -294,6 +294,55 @@ async function enviarCertificadoParaInscricao(
   return { ok: true };
 }
 
+const updateInscricaoEmailSchema = z.object({
+  inscricaoId: z.string().min(1),
+  email: z.string().email("E-mail inválido"),
+});
+
+export async function updateInscricaoEmailAction(
+  inscricaoId: string,
+  email: string
+): Promise<ActionState> {
+  try {
+    await requireAdmin();
+  } catch {
+    return { error: "Sessão expirada. Faça login novamente." };
+  }
+
+  const parsed = updateInscricaoEmailSchema.safeParse({ inscricaoId, email });
+  if (!parsed.success) {
+    return { error: parsed.error.errors[0]?.message ?? "E-mail inválido" };
+  }
+
+  const inscricao = await prisma.inscricao.findUnique({
+    where: { id: parsed.data.inscricaoId },
+    select: { id: true, email: true, palestraId: true },
+  });
+
+  if (!inscricao) return { error: "Inscrição não encontrada" };
+
+  const novoEmail = parsed.data.email.trim().toLowerCase();
+  if (novoEmail === inscricao.email) {
+    return { success: "E-mail já está assim cadastrado." };
+  }
+
+  await prisma.inscricao.update({
+    where: { id: inscricao.id },
+    data: {
+      email: novoEmail,
+      certificadoEnviado: false,
+      certificadoEnviadoEm: null,
+    },
+  });
+
+  revalidatePath("/admin");
+  revalidatePath(`/admin/palestras/${inscricao.palestraId}`);
+
+  return {
+    success: `E-mail atualizado para ${novoEmail}. Status de envio marcado como pendente — use Reenviar se a palestra já foi encerrada.`,
+  };
+}
+
 export async function reenviarCertificadoEmailAction(
   inscricaoId: string
 ): Promise<ActionState> {
