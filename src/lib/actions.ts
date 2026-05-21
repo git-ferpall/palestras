@@ -260,7 +260,7 @@ async function enviarCertificadoParaInscricao(
   inscricao: InscricaoEmailRow,
   tituloPalestra: string
 ): Promise<{ ok: true } | { ok: false; error: string }> {
-  let hash = inscricao.validacaoHash ?? generateValidacaoHash();
+  const hash = inscricao.validacaoHash ?? generateValidacaoHash();
   if (!inscricao.validacaoHash) {
     await prisma.inscricao.update({
       where: { id: inscricao.id },
